@@ -1,14 +1,22 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Onboarding from './components/Onboarding/Onboarding';
+import Login from './components/Login/Login';
 import Recommendation from './components/Recommendation';
 
 function App() {
   return (
-    <div className="App">
-      <Onboarding />
-      <Recommendation />
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<Onboarding />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/recommendation" element={<Recommendation />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
