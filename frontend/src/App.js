@@ -4,6 +4,7 @@ import './App.css';
 import Onboarding from './components/Onboarding/Onboarding';
 import Login from './components/Login/Login';
 import Recommendation from './components/Recommendation';
+import HomePage from './pages/HomePage/HomePage';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Route path="/" element={<Onboarding />} />
           <Route path="/login" element={<Login />} />
           <Route path="/recommendation" element={<Recommendation />} />
+          <Route path="/home" element={<HomePage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>

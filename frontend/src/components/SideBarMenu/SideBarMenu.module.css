@@ -1,0 +1,152 @@
+.sidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0 24px 0; /* Adjusted padding to prevent overflow */
+  box-sizing: border-box;
+  color: #a0aec0;
+  background-color: transparent;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.sidebarCollapsed { width: 90px; }
+.sidebarExpanded { width: 220px; }
+
+
+.pillContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1; /* take remaining height */
+  border-radius: 40px; /* high pill roundedness */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03); /* slight glass effect */
+  backdrop-filter: blur(16px);
+  padding: 16px 0;
+  margin-bottom: 16px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pillCollapsed { width: 64px; align-items: center; }
+.pillExpanded { width: 170px; align-items: stretch; padding: 16px 12px; }
+
+.menuGroup, .bottomGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.pillCollapsed .menuGroup, .pillCollapsed .bottomGroup {
+  align-items: center;
+}
+
+.pillExpanded .menuGroup, .pillExpanded .bottomGroup {
+  align-items: flex-start;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Base dimensions for states */
+.pillCollapsed .menuItem {
+  width: 44px;
+  height: 44px;
+  justify-content: center;
+}
+
+.pillExpanded .menuItem {
+  width: 100%;
+  height: 44px;
+  justify-content: flex-start;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.menuItem:hover:not([class*="active"]) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+}
+
+.iconInactive {
+  color: #7f8fa6;
+  transition: all 0.3s ease;
+}
+
+.menuItem:hover .iconInactive {
+  color: #d1d8e0;
+}
+
+/* ==================================
+   Active State - Collapsed Mode
+=================================== */
+.activeCollapsed {
+  background-color: #dbe4f0; /* Light background block */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.iconActiveCollapsed {
+  color: #1a274c; /* Dark icon */
+  transition: all 0.3s ease;
+}
+
+/* ==================================
+   Active State - Expanded Mode
+=================================== */
+.activeExpanded {
+  background: rgba(255, 255, 255, 0.15); /* Soft transparent highlight */
+}
+
+.iconActiveExpanded {
+  color: #ffffff; /* Bright white icon */
+  transition: all 0.3s ease;
+}
+
+/* ==================================
+   Labels
+=================================== */
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 14px;
+  white-space: nowrap;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.labelCollapsed {
+  opacity: 0;
+  width: 0;
+  transform: translateX(-10px);
+}
+
+.labelExpanded {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.activeExpanded .labelExpanded {
+  color: #ffffff; /* pure white text when active */
+}
+
+.menuItem:not([class*="active"]) .labelExpanded {
+  color: #a0aec0; /* inactive text color */
+}
+
+.menuItem:hover:not([class*="active"]) .labelExpanded {
+  color: #d1d8e0;
+}
