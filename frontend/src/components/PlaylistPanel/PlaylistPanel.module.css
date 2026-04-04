@@ -8,7 +8,8 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  width: 352px;
+  height: 754px;
   color: #fff;
   box-sizing: border-box;
 }

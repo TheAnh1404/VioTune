@@ -7,6 +7,8 @@ import styles from './HomePage.module.css';
 import FeatureCards from '../../components/FeatureCards/FeatureCards';
 import PlaylistSection from '../../components/PlaylistSection/PlaylistSection';
 import PersonalPlaylist from '../../components/PersonalPlaylist/PersonalPlaylist';
+import ArtistUpdates from '../../components/ArtistUpdates/ArtistUpdates';
+import DailyPick from '../../components/DailyPick/DailyPick';
 
 const HomePage = () => {
   return (
@@ -21,6 +23,8 @@ const HomePage = () => {
                 <FeatureCards />
                 <PlaylistSection />
                 <PersonalPlaylist />
+                <ArtistUpdates />
+                <DailyPick />
               </div>
             </div>
             <div className={styles.rightSection}>

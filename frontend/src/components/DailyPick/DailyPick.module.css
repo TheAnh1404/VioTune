@@ -1,0 +1,101 @@
+.sectionContainer {
+    padding: 20px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.seeAll {
+    color: #a0aec0;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.songRow {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.songRow:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateX(5px);
+}
+
+.coverImg {
+    width: 50px;
+    height: 50px;
+    border-radius: 6px;
+    object-fit: cover;
+    margin-right: 20px;
+}
+
+.mainInfo {
+    flex: 2;
+}
+
+.songName {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.artistName {
+    font-size: 14px;
+    color: #a0aec0;
+    margin: 0;
+}
+
+.albumInfo {
+    flex: 2;
+    text-align: center;
+    color: #cbd5e0;
+    font-size: 15px;
+}
+
+.duration {
+    flex: 1;
+    text-align: right;
+    color: #a0aec0;
+    font-size: 14px;
+    padding-right: 30px;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.actionIcon {
+    color: #a0aec0;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.actionIcon:hover {
+    color: white;
+}

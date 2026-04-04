@@ -1,0 +1,122 @@
+.sectionContainer {
+    padding: 20px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.seeAll {
+    color: #a0aec0;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Chia làm 2 cột đều nhau */
+    gap: 25px;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Phần hiển thị Album + Đĩa nhạc */
+.imageContainer {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin-right: 25px;
+}
+
+.albumCover {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    position: absolute;
+    z-index: 2;
+    object-fit: cover;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+}
+
+.vinyl {
+    width: 95px;
+    height: 95px;
+    background: #1a202c;
+    border-radius: 50%;
+    position: absolute;
+    right: 5px;
+    top: 2.5px;
+    z-index: 1;
+    border: 2px solid #2d3748;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Tạo hiệu ứng rãnh đĩa */
+    background: radial-gradient(circle, #2d3748 20%, #1a202c 21%, #1a202c 100%);
+}
+
+.vinylInner {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Thông tin Text */
+.info {
+    flex: 1;
+}
+
+.songTitle {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 5px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.artistName {
+    font-size: 15px;
+    color: #a0aec0;
+}
+
+.heartIcon {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: #a0aec0;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.heartIcon:hover {
+    color: #ff4d4d;
+}

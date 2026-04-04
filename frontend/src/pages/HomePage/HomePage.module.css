@@ -54,7 +54,11 @@
 }
 
 .rightSection {
-  width: 360px; /* Fixed width for the Playlist panel */
+  width: 352px;
+  height: 754px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: 0;
 }
