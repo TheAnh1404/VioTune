@@ -5,6 +5,7 @@ import Footer from '../../components/Footer/Footer';
 import PlaylistPanel from '../../components/PlaylistPanel/PlaylistPanel';
 import styles from './HomePage.module.css';
 import FeatureCards from '../../components/FeatureCards/FeatureCards';
+import PlaylistSection from '../../components/PlaylistSection/PlaylistSection';
 
 const HomePage = () => {
   return (
@@ -17,6 +18,7 @@ const HomePage = () => {
             <div className={styles.leftSection}>
               <div className={styles.placeholderLeft}>
                 <FeatureCards />
+                <PlaylistSection />
               </div>
             </div>
             <div className={styles.rightSection}>
