@@ -1,0 +1,198 @@
+.footerContainer {
+    width: 1272px;
+    height: 473px;
+    background: #2d3a4f; /* Màu nền xanh xám đặc trưng như ảnh */
+    border: 2px solid #5a6b89; /* Màu viền bao quanh */
+    border-radius: 25px;
+    padding: 50px 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+/* Phần trên */
+.topSection {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.brandInfo {
+    flex: 1;
+}
+
+.logoWrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+.logoImg {
+    width: 100px;
+    height: auto;
+}
+
+.brandName {
+    font-size: 52px;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: -1px;
+}
+
+.welcomeText {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.description {
+    font-size: 16px;
+    line-height: 1.4;
+    color: #a0aec0;
+    max-width: 320px;
+}
+
+/* Link Columns */
+.linksGrid {
+    display: flex;
+    gap: 60px;
+    flex: 1.5;
+    justify-content: flex-end;
+}
+
+.linkColumn h4 {
+    font-size: 22px;
+    margin-bottom: 20px;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.linkColumn ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.linkColumn li {
+    margin-bottom: 12px;
+    color: #cbd5e0;
+    font-size: 16px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.linkColumn li:hover {
+    color: #fff;
+}
+
+/* Đường kẻ giữa có 2 chấm tròn */
+.divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.4);
+    width: 85%;
+    margin: 10px auto;
+    position: relative;
+}
+
+.divider::before, .divider::after {
+    content: '';
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background: #fff;
+    border-radius: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.divider::before { left: 0; }
+.divider::after { right: 0; }
+
+/* Phần dưới */
+.bottomSection {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.newsletter p {
+    font-size: 15px;
+    color: #cbd5e0;
+    margin-bottom: 15px;
+}
+
+.inputWrapper {
+    display: flex;
+    gap: 15px;
+}
+
+.inputWithIcon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.mailIcon {
+    position: absolute;
+    left: 15px;
+    color: #4a5568;
+    pointer-events: none;
+}
+
+.emailInput {
+    width: 400px;
+    background: #94a3b8; /* Màu xám xanh của input trong ảnh */
+    border: none;
+    border-radius: 10px;
+    padding: 15px 15px 15px 45px;
+    color: #1a202c;
+    font-weight: 500;
+    outline: none;
+}
+
+.emailInput::placeholder {
+    color: #4a5568;
+}
+
+.subscribeBtn {
+    background: #28448c; /* Màu xanh đậm của nút Subscribe */
+    color: white;
+    border: none;
+    padding: 0 35px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.subscribeBtn:hover {
+    background: #1e3a8a;
+}
+
+.socialWrapper {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.followUsText {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.socialIcons {
+    display: flex;
+    gap: 15px;
+}
+
+.socialIcons img {
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+} 

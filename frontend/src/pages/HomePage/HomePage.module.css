@@ -18,6 +18,43 @@
   display: flex;
   flex-direction: column;
   padding: 0 24px 24px 24px;
-  overflow-y: auto;
+  overflow-y: auto; /* Enable scroll for the whole main area! */
   color: white;
+  gap: 40px; /* Space before footer */
+}
+
+/* Custom scrollbar for main content */
+.mainContent::-webkit-scrollbar {
+  width: 6px;
+}
+.mainContent::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+.mainContent::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 6px;
+}
+
+.topSplit {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  flex: 1; /* take remaining vertical space to push footer down */
+}
+
+.leftSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.placeholderLeft {
+  flex: 1; 
+  min-height: 50vw; /* Dummy height so page requires scrolling */
+}
+
+.rightSection {
+  width: 360px; /* Fixed width for the Playlist panel */
+  display: flex;
+  flex-direction: column;
 }
