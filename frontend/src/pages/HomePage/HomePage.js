@@ -4,6 +4,7 @@ import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
 import PlaylistPanel from '../../components/PlaylistPanel/PlaylistPanel';
 import styles from './HomePage.module.css';
+import FeatureCards from '../../components/FeatureCards/FeatureCards';
 
 const HomePage = () => {
   return (
@@ -15,9 +16,7 @@ const HomePage = () => {
           <div className={styles.topSplit}>
             <div className={styles.leftSection}>
               <div className={styles.placeholderLeft}>
-                <h2 style={{ padding: '20px', color: '#a0aec0', fontWeight: 'normal' }}>
-                  Main Content Area (To be designed later)
-                </h2>
+                <FeatureCards />
               </div>
             </div>
             <div className={styles.rightSection}>
