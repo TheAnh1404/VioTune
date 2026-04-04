@@ -6,6 +6,7 @@ import PlaylistPanel from '../../components/PlaylistPanel/PlaylistPanel';
 import styles from './HomePage.module.css';
 import FeatureCards from '../../components/FeatureCards/FeatureCards';
 import PlaylistSection from '../../components/PlaylistSection/PlaylistSection';
+import PersonalPlaylist from '../../components/PersonalPlaylist/PersonalPlaylist';
 
 const HomePage = () => {
   return (
@@ -19,6 +20,7 @@ const HomePage = () => {
               <div className={styles.placeholderLeft}>
                 <FeatureCards />
                 <PlaylistSection />
+                <PersonalPlaylist />
               </div>
             </div>
             <div className={styles.rightSection}>
