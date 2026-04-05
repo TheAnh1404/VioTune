@@ -1,0 +1,48 @@
+Dựa vào mã nguồn mới nhất trong tệp `content_based.py` của dự án, hệ thống gợi ý dựa trên nội dung (Content-Based Recommendation) của bạn đã được tối ưu hóa mạnh mẽ. Dưới đây là giải thích chi tiết từng bước luồng hoạt động:
+
+### 1. Cách hệ thống lấy dữ liệu (Data Loading)
+Đầu tiên, hệ thống đọc kho dữ liệu các bài hát từ file CSV:
+```python
+songs = pd.read_csv(data_path)
+```
+Hệ thống trích xuất 7 đặc trưng số học (features) để định hình một bài hát:
+- `danceability`: Độ sôi động/dễ nhảy.
+- `energy`: Mức độ năng lượng, cường độ âm thanh.
+- `acousticness`: Đặc tính âm mộc (nhiều nhạc cụ thật hay điện tử).
+- `instrumentalness`: Mức độ chỉ có nhạc cụ (không có lời hát).
+- `liveness`: Khả năng đây là bản thu thu âm trực tiếp (live).
+- `valence`: Độ vui vẻ, tích cực của giai điệu.
+- `tempo`: Nhịp độ bài hát (số nhịp trên phút - BPM).
+
+### 2. Chuẩn hoá & Đánh trọng số đặc trưng (Normalization & Feature Weighting)
+Hệ thống sử dụng **MinMaxScaler** để đưa tất cả các thang đo âm thanh (từ 0 đến hàng trăm) về chung một tỷ lệ `[0, 1]` nhằm đánh giá công bằng.
+Sau đó, một bước tối ưu cực kỳ quan trọng được áp dụng là **Feature Weighting (Đánh trọng số)**:
+```python
+weights = np.array([1.2, 1.1, 0.9, 0.7, 0.6, 1.2, 1.0])
+scaled_features = scaled_features * weights
+```
+- Các chỉ số tác động mạnh tới "gu" nghe nhạc của con người như Nhịp điệu (`danceability`), Cảm xúc (`valence`) và Năng lượng (`energy`) được nhân với hệ số lớn (1.1 - 1.2) để tăng độ ăn khớp.
+- Các chỉ số dễ gây nhiễu như tiếng vỗ tay/hát live (`liveness`) hay nhạc không lời (`instrumentalness`) bị giảm nhẹ trọng số xuống.
+
+### 3. Tìm 1000 ứng cử viên tốt nhất bằng AI (K-Nearest Neighbors)
+Ngay khi người dùng chọn một "Bài hát gốc", thay vì phải đi tính toán và quét cồng kềnh với 114,000 bài hát thông qua Cosine Similarity thủ công, hệ thống sử dụng module máy học chuyên dụng **NearestNeighbors** của scikit-learn:
+```python
+distances, indices = nn_model.kneighbors(song_feature)
+```
+- Thuật toán `brute` với hệ mét `cosine` sẽ tìm cực nhanh ra **Top 1000 bài hát** có "giai điệu và nhịp đập" giống với bài gốc nhất để đưa vào vòng xét tuyển tiếp theo. 
+
+### 4. Tối ưu hoá & Đánh giá sâu (Advanced Reranking / Metadata Boosting)
+Với 1000 "ứng cử viên" có âm thanh rất giống nhau, hệ thống bắt đầu quy trình tổ chức xếp hạng lại dựa vào Siêu dữ liệu (Metadata) để tìm ra bài hát chân thực nhất. 
+Điểm cơ bản của mỗi bài được tính là `1.0 - khoảng_cách_cosine`. Sau đó cộng thêm các điểm thưởng:
+
+- **Bộ lọc Thể loại (Genre Boost):** `+0.1 điểm` nếu ứng cử viên có cùng thể loại (`track_genre`) với bài gốc.
+- **Bộ lọc Nghệ sĩ (Artist Boost):** `+0.15 điểm` (t́c động mạnh nhất) nếu ứng cử viên được thể hiện bởi chung một ca sĩ hoặc ban nhạc với bài gốc. Giúp giữ người dùng ở lại với thần tượng của họ.
+- **Bộ lọc Phủ sóng (Popularity Boost):** `+0.05 điểm` (tuỳ thuộc vào thang điểm Popularity 0-100 của bài trên Spotify). Nếu 2 bài có giai điệu tương đương, hệ thống sẽ tự động đưa bài nổi tiếng/thịnh hành hơn lên xếp trên.
+
+### 5. Đưa ra Output (Top N)
+Cuối cùng, hệ thống làm 2 thao tác dọn dẹp:
+- Gán điểm của bài hát gốc thành `-1` để chắc chắn nó không tự đề xuất lại chính mình.
+- Sắp xếp mảng độ tương đồng từ cao xuống thấp và lấy ra 5 bài hát có điểm số cao nhất (`top_n`).
+- Trích xuất tên bài, nghệ sĩ, thể loại và độ phổ biến để trả về cho người dùng (Output).
+
+**Tóm tắt chung:** Hệ thống hiện tại vận hành như một mô hình Tìm kiếm 2 Bước (Two-Tower/Two-Stage model) thường thấy ở các ông lớn công nghệ. Bước 1 (Retrieval): Dùng KNN phân tích phổ âm thanh để kéo dải lưới lấy nhanh 1000 bản nhạc hay nhất. Bước 2 (Ranking): Dùng logic kinh doanh (Ca sĩ, Thể loại, Độ nổi tiếng) để tinh chỉnh lại 1000 bài đó một cách tỉ mỉ trước khi chốt hạ 5 bài xuất sắc nhất đưa lên màn hình cho người nghe.
