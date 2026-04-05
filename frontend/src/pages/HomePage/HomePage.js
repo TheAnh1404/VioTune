@@ -9,6 +9,8 @@ import PlaylistSection from '../../components/PlaylistSection/PlaylistSection';
 import PersonalPlaylist from '../../components/PersonalPlaylist/PersonalPlaylist';
 import ArtistUpdates from '../../components/ArtistUpdates/ArtistUpdates';
 import DailyPick from '../../components/DailyPick/DailyPick';
+import ArtistsFollowed from '../../components/ArtistsFollowed/ArtistsFollowed';
+import HeroSeries from '../../components/HeroSeries/HeroSeries';
 
 const HomePage = () => {
   return (
@@ -25,6 +27,8 @@ const HomePage = () => {
                 <PersonalPlaylist />
                 <ArtistUpdates />
                 <DailyPick />
+                <ArtistsFollowed />
+                <HeroSeries />
               </div>
             </div>
             <div className={styles.rightSection}>
