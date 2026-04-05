@@ -1,1 +1,2 @@
 Ae nhớ check update, pull về code mới rồi code kẻo lỗi; 
+oke;
