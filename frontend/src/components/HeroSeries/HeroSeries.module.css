@@ -45,15 +45,15 @@
 
 .seriesGrid {
     display: flex;
-    gap: 20px;
+    gap: 16px;
     width: 100%;
-    justify-content: center;
+    justify-content: space-between;
 }
 
 .seriesCard {
     position: relative;
-    width: 190px;
-    height: 260px;
+    width: calc((100% - 64px) / 5);
+    aspect-ratio: 190 / 260;
     border-radius: 15px;
     overflow: hidden;
     cursor: pointer;

@@ -49,7 +49,9 @@
 }
 
 .placeholderLeft {
-  flex: 1; 
+  width: 950px;
+  flex-shrink: 0;
+  max-width: 100%;
   min-height: 50vw; /* Dummy height so page requires scrolling */
 }
 

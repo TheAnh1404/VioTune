@@ -1,13 +1,13 @@
 .container {
     display: flex;
-    gap: 25px;
-    padding: 20px;
-    justify-content: center;
+    gap: 20px;
+    padding: 20px 0;
+    justify-content: space-between;
 }
 
 .card {
     position: relative;
-    width: 320px;
+    width: calc((100% - 40px) / 3);
     height: 140px;
     border-radius: 15px;
     overflow: hidden;
