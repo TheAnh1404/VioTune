@@ -27,7 +27,7 @@ print("🔥 Gợi ý bài hát:")
 print(result)
 
 print("🎧 Gợi ý theo Collaborative:")
-print(recommend_cf(user_id=2))
+print(recommend_cf(user_id=100))
 
 print("🚀 Hybrid Recommendation:")
 print(hybrid_recommend(user_id=1, song_id=track_id))

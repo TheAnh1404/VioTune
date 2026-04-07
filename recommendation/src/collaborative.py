@@ -176,15 +176,15 @@ model_exists = all(os.path.exists(os.path.join(models_dir, f)) for f in model_fi
 
 svd = SVDModel(n_users=n_users, n_items=n_items, k=50, lr=0.005, reg=0.02, n_epochs=30)
 
-if model_exists:
-    # Load model đã train sẵn (không cần train lại)
-    print("[CF] Phát hiện model đã được train, đang tải...")
-    svd.load(models_dir)
-else:
-    # Train mới từ đầu
-    print("[CF] Bắt đầu huấn luyện SVD Model...")
-    svd.fit(train_data, test_data)
-    svd.save(models_dir)
+# if model_exists:
+#     Load model đã train sẵn (không cần train lại)
+#     print("[CF] Phát hiện model đã được train, đang tải...")
+#     svd.load(models_dir)
+# else:
+# Train mới từ đầu
+print("[CF] Bắt đầu huấn luyện SVD Model...")
+svd.fit(train_data, test_data)
+svd.save(models_dir)
 
 
 # ===== HÀM GỢI Ý CF =====
