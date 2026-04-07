@@ -13,6 +13,11 @@ import ArtistsFollowed from '../../components/ArtistsFollowed/ArtistsFollowed';
 import HeroSeries from '../../components/HeroSeries/HeroSeries';
 import RecommendationSection from '../../components/RecommendationSection/RecommendationSection';
 import RecentAlbums from '../../components/RecentAlbums/RecentAlbums';
+import InterestGenres from '../../components/InterestGenres/InterestGenres';
+import MoreArtists from '../../components/MoreArtists/MoreArtists';
+import TrendingNow from '../../components/TrendingNow/TrendingNow';
+import RecentlySeen from '../../components/RecentlySeen/RecentlySeen';
+import MusicPlayer from '../../components/MusicPlayer/MusicPlayer';
 
 const HomePage = () => {
   return (
@@ -33,12 +38,17 @@ const HomePage = () => {
                 <HeroSeries />
                 <RecommendationSection />
                 <RecentAlbums />
+                <InterestGenres />
+                <MoreArtists />
+                <TrendingNow />
+                <RecentlySeen />
               </div>
             </div>
             <div className={styles.rightSection}>
               <PlaylistPanel />
             </div>
           </div>
+          <MusicPlayer />
           <Footer />
         </div>
       </div>
