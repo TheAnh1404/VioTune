@@ -11,6 +11,7 @@ import ArtistUpdates from '../../components/ArtistUpdates/ArtistUpdates';
 import DailyPick from '../../components/DailyPick/DailyPick';
 import ArtistsFollowed from '../../components/ArtistsFollowed/ArtistsFollowed';
 import HeroSeries from '../../components/HeroSeries/HeroSeries';
+import RecommendationSection from '../../components/RecommendationSection/RecommendationSection';
 
 const HomePage = () => {
   return (
@@ -29,6 +30,7 @@ const HomePage = () => {
                 <DailyPick />
                 <ArtistsFollowed />
                 <HeroSeries />
+                <RecommendationSection />
               </div>
             </div>
             <div className={styles.rightSection}>
