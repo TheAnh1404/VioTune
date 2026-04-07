@@ -1,0 +1,125 @@
+.sectionContainer {
+    padding: 20px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.seeAll {
+    color: #a0aec0;
+    cursor: pointer;
+    font-size: 16px;
+    transition: color 0.2s;
+}
+
+.seeAll:hover {
+    color: #ffffff;
+}
+
+/* Container danh sách bài hát có thanh scroll dọc */
+.listContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 15px;
+}
+
+/* Tùy chỉnh thanh scrollbar cho giống ảnh mẫu */
+.listContainer::-webkit-scrollbar {
+    width: 6px;
+}
+
+.listContainer::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.listContainer::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+}
+
+.songRow {
+    display: flex;
+    align-items: center;
+    padding: 12px 25px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.songRow:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateX(5px);
+}
+
+.coverImg {
+    width: 55px;
+    height: 55px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin-right: 20px;
+}
+
+.mainInfo {
+    flex: 2;
+}
+
+.songName {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.artistName {
+    font-size: 15px;
+    color: #a0aec0;
+    margin: 4px 0 0 0;
+}
+
+.albumInfo {
+    flex: 2;
+    text-align: center;
+    color: #cbd5e0;
+    font-size: 16px;
+}
+
+.duration {
+    flex: 1;
+    text-align: right;
+    color: #a0aec0;
+    font-size: 15px;
+    padding-right: 40px;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.actionIcon {
+    color: #a0aec0;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.actionIcon:hover {
+    color: white;
+}
