@@ -1,0 +1,127 @@
+.sectionContainer {
+    padding: 20px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.seeAll {
+    color: #a0aec0;
+    cursor: pointer;
+    font-size: 16px;
+    transition: color 0.2s;
+}
+
+.seeAll:hover {
+    color: #ffffff;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 cột như ảnh mẫu */
+    gap: 25px;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(15px);
+    border-radius: 15px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Hiệu ứng Album + Vinyl ló ra */
+.albumWrapper {
+    position: relative;
+    width: 125px;
+    height: 110px;
+    margin-right: 20px;
+}
+
+.cover {
+    width: 110px;
+    height: 110px;
+    border-radius: 8px;
+    position: absolute;
+    z-index: 2;
+    object-fit: cover;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.6);
+}
+
+.vinylDisc {
+    width: 100px;
+    height: 100px;
+    background: #111;
+    border-radius: 50%;
+    position: absolute;
+    right: 0;
+    top: 5px;
+    z-index: 1;
+    border: 1px solid #2d3748;
+    background: radial-gradient(circle, #2d3748 18%, #000 20%, #111 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vinylCenter {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Thông tin Album */
+.info {
+    flex: 1;
+}
+
+.albumName {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 5px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+.artist {
+    font-size: 16px;
+    color: #a0aec0;
+}
+
+.heartIcon {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    color: #a0aec0;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.heartIcon:hover {
+    color: #ff4d4d;
+}
