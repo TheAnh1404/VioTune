@@ -42,9 +42,13 @@ for user_id in range(1, n_users + 1):
         user_interactions.append([user_id, song, np.random.randint(1, 4)])
 
 # ==== 3. XUẤT RA FILE ====
-# Collaborative.py hiện tại đọc cột: user_id, track_id, play_count
+# Cột lưu trữ: user_id, track_id, play_count (lần nghe thô)
+# Lưu ý: collaborative.py sẽ tự áp dụng Log Normalization (log1p) khi train
 df_interactions = pd.DataFrame(user_interactions, columns=['user_id', 'track_id', 'play_count'])
 df_interactions.to_csv(output_path, index=False)
 
 print(f"-> Hoàn tất! Đã tạo {len(df_interactions)} lượt nghe từ {n_users} users cá nhân hoá.")
 print(f"-> Đã ghi đè file tại: {output_path}")
+print("")
+print("[!] Lưu ý: Bạn vừa tạo lại dữ liệu mới. Hãy xóa thư mục models/ để buộc hệ thống train lại mô hình SVD.")
+print("    Lệnh xóa model cũ: rmdir /s /q models")
