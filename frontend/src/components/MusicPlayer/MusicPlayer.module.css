@@ -101,9 +101,19 @@
 
 .progressFill {
     height: 100%;
-    width: 65%; /* Giá trị giả định theo ảnh */
+    width: 25%; /* Default fallback */
     background: #7f9cf5; /* Màu xanh tím đặc trưng */
     border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.playingProgress {
+    animation: progressAnimation 225s linear infinite;
+}
+
+@keyframes progressAnimation {
+    0% { width: 25%; }
+    100% { width: 100%; }
 }
 
 /* Phần tiện ích (Phải) */

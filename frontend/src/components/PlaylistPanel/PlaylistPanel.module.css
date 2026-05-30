@@ -163,3 +163,8 @@
 .dragIcon:hover {
   color: #f8fafc;
 }
+
+.activeTrack {
+  background-color: rgba(29, 185, 84, 0.15) !important;
+  border-color: rgba(29, 185, 84, 0.4) !important;
+}

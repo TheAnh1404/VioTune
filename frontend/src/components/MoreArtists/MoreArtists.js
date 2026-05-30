@@ -1,28 +1,34 @@
 import React from 'react';
-import { Play } from 'lucide-react';
 import styles from './MoreArtists.module.css';
 
-const ArtistCard = ({ name, imageUrl }) => (
-  <div className={styles.card}>
+const getArtistCover = (name) => {
+  const images = [
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&q=80",
+    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80",
+    "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&q=80",
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80",
+    "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&q=80"
+  ];
+  let hash = 0;
+  if (name) {
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+  }
+  const index = Math.abs(hash) % images.length;
+  return images[index];
+};
+
+const ArtistCard = ({ name, imageUrl, onClick }) => (
+  <div className={styles.card} onClick={() => onClick && onClick(name)} style={{ cursor: 'pointer' }}>
     <div className={styles.avatarWrapper}>
       <img src={imageUrl} alt={name} className={styles.avatarImg} />
-      <div className={styles.playOverlay}>
-        <Play className={styles.playIcon} size={20} fill="currentColor" />
-      </div>
     </div>
     <span className={styles.artistName}>{name}</span>
   </div>
 );
 
-const MoreArtists = () => {
-  const suggestedArtists = [
-    { id: 1, name: 'NF', imageUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&q=80' },
-    { id: 2, name: 'Ed Sheeran', imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80' },
-    { id: 3, name: 'Drake', imageUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&q=80' },
-    { id: 4, name: 'Travis Scott', imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80' },
-    { id: 5, name: 'Billie Eilish', imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&q=80' },
-  ];
-
+const MoreArtists = ({ artists = [], onArtistClick }) => {
   return (
     <section className={styles.sectionContainer}>
       <div className={styles.header}>
@@ -31,13 +37,21 @@ const MoreArtists = () => {
       </div>
       
       <div className={styles.grid}>
-        {suggestedArtists.map((artist) => (
-          <ArtistCard 
-            key={artist.id} 
-            name={artist.name} 
-            imageUrl={artist.imageUrl} 
-          />
-        ))}
+        {artists.length === 0 ? (
+          <p style={{ color: '#a0aec0', padding: '10px' }}>Loading artists...</p>
+        ) : (
+          artists.map((artistName, index) => {
+            const cover = getArtistCover(artistName);
+            return (
+              <ArtistCard 
+                key={index} 
+                name={artistName} 
+                imageUrl={cover} 
+                onClick={onArtistClick}
+              />
+            );
+          })
+        )}
       </div>
     </section>
   );

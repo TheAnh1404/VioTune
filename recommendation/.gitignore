@@ -1,0 +1,13 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+.venv/
+
+# Large dataset files
+data/dataset.csv
+data/interactions.csv
+
+# Model weights
+models/*.npy
