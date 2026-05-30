@@ -1,9 +1,9 @@
 import React from 'react';
 import styles from './Header.module.css';
-import { Search, Bell, Settings, X } from 'lucide-react';
+import { Search, Bell, Settings, X, LogOut } from 'lucide-react';
 import logo from '../../assets/logo.png';
 
-const Header = ({ searchQuery, onSearchChange, username = "Guest", userId = "42" }) => {
+const Header = ({ searchQuery, onSearchChange, username = "Guest", onLogOut }) => {
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
@@ -34,17 +34,38 @@ const Header = ({ searchQuery, onSearchChange, username = "Guest", userId = "42"
       </div>
 
       <div className={styles.rightSection}>
-        <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px', color: '#cbd5e1', fontSize: '14px', fontWeight: '500' }}>
-          <span style={{ background: 'rgba(255,255,255,0.08)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            🟢 User {userId} ({username})
+        {/* Authenticated user badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#cbd5e1', fontSize: '14px', fontWeight: '500' }}>
+          <span style={{
+            background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.15))',
+            padding: '6px 14px',
+            borderRadius: '20px',
+            border: '1px solid rgba(139,92,246,0.3)',
+            color: '#c4b5fd'
+          }}>
+            🟢 {username}
           </span>
         </div>
+
         <button className={styles.iconButton}>
           <Bell size={22} className={styles.icon} />
         </button>
         <button className={styles.iconButton}>
           <Settings size={22} className={styles.icon} />
         </button>
+
+        {/* Logout button */}
+        {onLogOut && (
+          <button 
+            className={styles.iconButton} 
+            onClick={onLogOut} 
+            title="Sign out"
+            style={{ color: '#f87171' }}
+          >
+            <LogOut size={20} />
+          </button>
+        )}
+
         <div className={styles.profileWrapper}>
           <img 
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" 
@@ -58,3 +79,4 @@ const Header = ({ searchQuery, onSearchChange, username = "Guest", userId = "42"
 };
 
 export default Header;
+

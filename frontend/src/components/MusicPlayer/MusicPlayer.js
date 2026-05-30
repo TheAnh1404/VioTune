@@ -51,7 +51,9 @@ const MusicPlayer = ({
   onToggleQueue,
   showQueue = false,
   volume = 0.8,
-  onVolumeChange
+  onVolumeChange,
+  previewLoading = false,
+  previewUrl = null
 }) => {
   const songTitle = currentSong ? currentSong.track_name : "No song playing";
   const songArtist = currentSong ? currentSong.artists : "Select a song to start listening";
@@ -120,8 +122,11 @@ const MusicPlayer = ({
             title={isShuffle ? "Shuffle On" : "Shuffle Off"}
           />
           <SkipBack size={24} className={styles.icon} onClick={onPrev} title="Previous Song" />
-          <div className={styles.playPauseBtn} onClick={onTogglePlay} style={{ cursor: 'pointer' }}>
-            {isPlaying && currentSong ? (
+          <div className={styles.playPauseBtn} onClick={!previewLoading ? onTogglePlay : undefined} 
+            style={{ cursor: previewLoading ? 'wait' : 'pointer', opacity: previewLoading ? 0.6 : 1 }}>
+            {previewLoading ? (
+              <span style={{ fontSize: '22px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
+            ) : isPlaying && currentSong ? (
               <Pause size={30} fill="currentColor" />
             ) : (
               <Play size={30} fill="currentColor" style={{ marginLeft: '4px' }} />

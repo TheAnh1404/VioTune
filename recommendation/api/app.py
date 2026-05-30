@@ -37,6 +37,9 @@ except Exception as e:
 # In-memory database of likes: {user_id: set([track_ids])}
 user_likes = {}
 
+# In-memory Deezer preview URL cache: { 'track_name|artist': result_dict }
+_preview_cache: dict = {}
+
 @app.get("/")
 def home():
     return {"status": "success", "message": "Recommendation API is running 🚀"}
@@ -123,6 +126,56 @@ def get_liked_songs(user_id: int):
     
     liked_songs = songs_df[songs_df['track_id'].isin(liked_ids)]
     return {"status": "success", "data": liked_songs[['track_id', 'track_name', 'artists', 'track_genre', 'popularity']].to_dict(orient="records")}
+
+@app.get("/songs/preview")
+def get_song_preview_route(track_name: str, artist: str):
+    """
+    Proxy to Deezer: search by track_name + artist, return a 30s MP3 preview_url.
+    Results are cached in-memory to avoid repeated external calls.
+    """
+    cache_key = f"{track_name.lower()}|{artist.lower()}"
+    if cache_key in _preview_cache:
+        return {"status": "success", "data": _preview_cache[cache_key]}
+
+    import urllib.parse as _urlparse
+    query = _urlparse.quote(f"{track_name} {artist}")
+    deezer_url = f"https://api.deezer.com/search?q={query}&limit=5"
+
+    try:
+        resp = requests.get(deezer_url, timeout=6)
+        resp.raise_for_status()
+        data = resp.json()
+
+        preview_url = None
+        cover_url = None
+        deezer_title = None
+        deezer_artist_name = None
+
+        if data.get("data"):
+            for item in data["data"]:
+                if item.get("preview"):
+                    preview_url = item["preview"]
+                    cover_url = item.get("album", {}).get("cover_medium", None)
+                    deezer_title = item.get("title", track_name)
+                    deezer_artist_name = item.get("artist", {}).get("name", artist)
+                    break
+
+        result = {
+            "preview_url": preview_url,
+            "cover_url": cover_url,
+            "deezer_title": deezer_title,
+            "deezer_artist": deezer_artist_name,
+            "found": preview_url is not None
+        }
+        _preview_cache[cache_key] = result
+        return {"status": "success", "data": result}
+
+    except requests.exceptions.Timeout:
+        return {"status": "success", "data": {"preview_url": None, "found": False, "error": "Deezer timeout"}}
+    except Exception as e:
+        return {"status": "success", "data": {"preview_url": None, "found": False, "error": str(e)}}
+
+
 
 @app.get("/songs/{track_id}")
 def get_song(track_id: str):
@@ -243,56 +296,3 @@ def get_mock_albums(limit: int = Query(5, ge=1, le=20)):
             "imageUrl": cover
         })
     return {"status": "success", "data": albums}
-
-# ─── In-memory preview cache to avoid repeated Deezer calls ───────────────────
-_preview_cache: dict = {}
-
-@app.get("/songs/preview")
-def get_song_preview(track_name: str, artist: str):
-    """
-    Search Deezer for a real 30-second MP3 preview of the given track.
-    Returns preview_url (str) or null if not found.
-    Caches results in memory to reduce API calls.
-    """
-    cache_key = f"{track_name.lower()}|{artist.lower()}"
-    if cache_key in _preview_cache:
-        return {"status": "success", "data": _preview_cache[cache_key]}
-
-    query = urllib.parse.quote(f"{track_name} {artist}")
-    deezer_url = f"https://api.deezer.com/search?q={query}&limit=5"
-
-    try:
-        resp = requests.get(deezer_url, timeout=5)
-        resp.raise_for_status()
-        data = resp.json()
-
-        preview_url = None
-        cover_url = None
-        deezer_title = None
-        deezer_artist = None
-
-        if data.get("data"):
-            for item in data["data"]:
-                if item.get("preview"):
-                    preview_url = item["preview"]
-                    cover_url = item.get("album", {}).get("cover_medium", None)
-                    deezer_title = item.get("title", track_name)
-                    deezer_artist = item.get("artist", {}).get("name", artist)
-                    break  # take first match that has a preview
-
-        result = {
-            "preview_url": preview_url,
-            "cover_url": cover_url,
-            "deezer_title": deezer_title,
-            "deezer_artist": deezer_artist,
-            "found": preview_url is not None
-        }
-
-        # Cache the result (even if not found, to avoid hammering Deezer)
-        _preview_cache[cache_key] = result
-        return {"status": "success", "data": result}
-
-    except requests.exceptions.Timeout:
-        return {"status": "success", "data": {"preview_url": None, "found": False, "error": "Deezer timeout"}}
-    except Exception as e:
-        return {"status": "success", "data": {"preview_url": None, "found": False, "error": str(e)}}

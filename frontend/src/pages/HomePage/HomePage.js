@@ -18,8 +18,14 @@ import MoreArtists from '../../components/MoreArtists/MoreArtists';
 import TrendingNow from '../../components/TrendingNow/TrendingNow';
 import RecentlySeen from '../../components/RecentlySeen/RecentlySeen';
 import MusicPlayer from '../../components/MusicPlayer/MusicPlayer';
+import { useAuth } from '../../context/AuthContext';
 
 const HomePage = () => {
+  // ── Firebase Auth context ────────────────────────────────────────────────────
+  const { user, logOut, likeSong, unlikeSong, getLikedSongs, recordPlay } = useAuth();
+  const userId = user?.uid || 'anonymous';
+  const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
+
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -27,17 +33,11 @@ const HomePage = () => {
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Dynamic user data
-  const userId = localStorage.getItem("user_id") || "42";
-  const username = localStorage.getItem("username") || "Music Lover";
-
   // Interactive States
+  const [likedSongs, setLikedSongs] = useState([]);
   const [likedSongIds, setLikedSongIds] = useState(new Set());
   const [refreshLikes, setRefreshLikes] = useState(0);
-  const [recentSongs, setRecentSongs] = useState(() => {
-    const saved = localStorage.getItem(`recent_songs_${userId}`);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [recentSongs, setRecentSongs] = useState([]);
   const [popularArtists, setPopularArtists] = useState([]);
   
   // Curated playlist states
@@ -81,21 +81,19 @@ const HomePage = () => {
     }
   };
 
-  // Fetch liked songs
+  // ── Load liked songs from Firestore on mount ─────────────────────────────────
   useEffect(() => {
     const fetchLikes = async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8000/songs/liked?user_id=${userId}`);
-        const json = await res.json();
-        if (json.status === "success") {
-          setLikedSongIds(new Set(json.data.map(s => s.track_id)));
-        }
+        const liked = await getLikedSongs();
+        setLikedSongs(liked);
+        setLikedSongIds(new Set(liked.map(s => s.track_id)));
       } catch (err) {
-        console.error("Error fetching likes:", err);
+        console.error('Error fetching likes from Firestore:', err);
       }
     };
-    fetchLikes();
-  }, [userId, refreshLikes]);
+    if (user) fetchLikes();
+  }, [user, refreshLikes]); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   // Fetch popular artists on mount
   useEffect(() => {
@@ -249,12 +247,13 @@ const HomePage = () => {
       setCurrentSong(song);
       setIsPlaying(true);
 
-      // Add to recently listened list
+      // Record play in Firestore + update local recent list
+      if (user) {
+        recordPlay(song).catch(err => console.warn('recordPlay failed:', err));
+      }
       setRecentSongs(prev => {
         const filtered = prev.filter(s => s.track_id !== song.track_id);
-        const next = [song, ...filtered].slice(0, 5); // keep top 5
-        localStorage.setItem(`recent_songs_${userId}`, JSON.stringify(next));
-        return next;
+        return [song, ...filtered].slice(0, 5);
       });
     }
   };
@@ -359,30 +358,36 @@ const HomePage = () => {
     }
   };
 
+  // ── Like / Unlike using Firestore ───────────────────────────────────────────
   const handleLikeSong = async (song) => {
+    if (!user) return;
+    const isLiked = likedSongIds.has(song.track_id);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${song.track_id}/like?user_id=${userId}`, {
-        method: 'POST'
+      // Optimistic update
+      setLikedSongIds(prev => {
+        const next = new Set(prev);
+        if (isLiked) next.delete(song.track_id);
+        else next.add(song.track_id);
+        return next;
       });
-      const json = await res.json();
-      if (json.status === "success") {
-        setLikedSongIds(prev => {
-          const next = new Set(prev);
-          if (json.liked) {
-            next.add(song.track_id);
-          } else {
-            next.delete(song.track_id);
-          }
-          return next;
-        });
-        setRefreshLikes(prev => prev + 1); // trigger sidebar updates
+
+      if (isLiked) {
+        await unlikeSong(song.track_id);
+      } else {
+        await likeSong(song);
       }
+      setRefreshLikes(prev => prev + 1);
     } catch (err) {
-      console.error("Error toggling like:", err);
+      console.error('Like/unlike failed:', err);
+      // Revert optimistic update on error
+      setLikedSongIds(prev => {
+        const next = new Set(prev);
+        if (isLiked) next.add(song.track_id);
+        else next.delete(song.track_id);
+        return next;
+      });
     }
   };
-
-
 
   const handleSelectPlaylist = async (playlistName, genreName) => {
     setSearchQuery(""); // Clear search to show playlist
@@ -406,17 +411,29 @@ const HomePage = () => {
     }
   };
 
+  // ── Log out via Firebase ─────────────────────────────────────────────────────
+  const handleLogOut = async () => {
+    try {
+      await logOut();
+      window.location.href = '/login';
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
   return (
     <div className={styles.homeContainer}>
       <Header 
         searchQuery={searchQuery} 
         onSearchChange={setSearchQuery} 
         username={username} 
-        userId={userId} 
+        userId={userId}
+        onLogOut={handleLogOut}
       />
       <div className={styles.contentWrapper}>
         <SideBarMenu 
           userId={userId}
+          likedSongs={likedSongs}
           likedSongIds={likedSongIds}
           refreshTrigger={refreshLikes}
           onPlaySong={handlePlaySong}
@@ -520,35 +537,35 @@ const HomePage = () => {
               />
             </div>
           </div>
-          
-          <MusicPlayer 
-            currentSong={currentSong} 
-            isPlaying={isPlaying} 
-            onTogglePlay={handleTogglePlay} 
-            duration={duration}
-            currentTime={currentTime}
-            onSeek={handleSeek}
-            onNext={handleNextSong}
-            onPrev={handlePrevSong}
-            repeatMode={repeatMode}
-            isShuffle={isShuffle}
-            onToggleRepeat={handleToggleRepeat}
-            onToggleShuffle={handleToggleShuffle}
-            onToggleQueue={() => setShowQueue(prev => !prev)}
-            showQueue={showQueue}
-            volume={volume}
-            onVolumeChange={handleVolumeChange}
-          />
-          
-          <audio 
-            ref={audioRef}
-            onDurationChange={(e) => setDuration(e.target.duration)}
-            onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
-            onEnded={handleAudioEnded}
-          />
           <Footer />
         </div>
       </div>
+      <MusicPlayer 
+        currentSong={currentSong} 
+        isPlaying={isPlaying} 
+        onTogglePlay={handleTogglePlay} 
+        duration={duration}
+        currentTime={currentTime}
+        onSeek={handleSeek}
+        onNext={handleNextSong}
+        onPrev={handlePrevSong}
+        repeatMode={repeatMode}
+        isShuffle={isShuffle}
+        onToggleRepeat={handleToggleRepeat}
+        onToggleShuffle={handleToggleShuffle}
+        onToggleQueue={() => setShowQueue(prev => !prev)}
+        showQueue={showQueue}
+        volume={volume}
+        onVolumeChange={handleVolumeChange}
+        previewLoading={previewLoading}
+        previewUrl={previewUrl}
+      />
+      <audio 
+        ref={audioRef}
+        onDurationChange={(e) => setDuration(e.target.duration)}
+        onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+        onEnded={handleAudioEnded}
+      />
     </div>
   );
 };

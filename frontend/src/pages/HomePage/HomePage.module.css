@@ -63,7 +63,7 @@
   position: fixed;
   top: 90px; /* layout right under Header */
   right: -400px; /* hidden off-screen by default */
-  bottom: 120px; /* leaves breathing room for MusicPlayer */
+  bottom: 100px; /* leaves breathing room for MusicPlayer */
   width: 360px;
   z-index: 999;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -112,7 +112,7 @@
     width: calc(100% - 32px);
     left: 16px;
     right: -100%;
-    bottom: 130px;
+    bottom: 100px;
   }
   
   .queueDrawerOpen {

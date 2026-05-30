@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './SideBarMenu.module.css';
 import { 
@@ -40,27 +40,10 @@ const SidebarItem = ({ icon: Icon, label, active, expanded, onClick }) => {
   );
 };
 
-const SideBarMenu = ({ userId = "42", likedSongIds = new Set(), refreshTrigger = 0, onPlaySong, currentSong }) => {
+const SideBarMenu = ({ userId = "42", likedSongs = [], likedSongIds = new Set(), refreshTrigger = 0, onPlaySong, currentSong }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Home');
   const [isExpanded, setIsExpanded] = useState(false);
-  const [likedSongs, setLikedSongs] = useState([]);
-
-  // Fetch liked songs inside sidebar to display them like Spotify Library
-  useEffect(() => {
-    const fetchLikedSongs = async () => {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/songs/liked?user_id=${userId}`);
-        const json = await res.json();
-        if (json.status === "success") {
-          setLikedSongs(json.data);
-        }
-      } catch (err) {
-        console.error("Error fetching liked songs in sidebar:", err);
-      }
-    };
-    fetchLikedSongs();
-  }, [userId, refreshTrigger, likedSongIds]);
 
   const menuItems = [
     { id: 'Home', label: 'Home', icon: Home, path: '/home' },
