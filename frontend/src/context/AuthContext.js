@@ -4,7 +4,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import {
   doc,
@@ -174,6 +175,11 @@ export const AuthProvider = ({ children }) => {
     const snap = await getDoc(doc(db, 'users', user.uid));
     return snap.exists() ? (snap.data().playHistory || []) : [];
   };
+  
+  // ── Reset Password ──────────────────────────────────────────────────────────
+  const resetPassword = async (email) => {
+    await sendPasswordResetEmail(auth, email);
+  };
 
   const value = {
     user,
@@ -187,7 +193,8 @@ export const AuthProvider = ({ children }) => {
     unlikeSong,
     getLikedSongs,
     recordPlay,
-    getPlayHistory
+    getPlayHistory,
+    resetPassword
   };
 
   return (

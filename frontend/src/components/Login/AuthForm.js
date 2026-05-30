@@ -2,7 +2,7 @@ import React from 'react';
 import styles from './Login.module.css';
 import { Mail } from 'lucide-react';
 
-const AuthForm = ({ type, title, subtitle, inputs, buttonText, showForgot, onSubmit, error }) => {
+const AuthForm = ({ type, title, subtitle, inputs, buttonText, showForgot, onForgotClick, onSubmit, error, children }) => {
   const isLoading = buttonText && (buttonText.includes('...'));
   return (
     <div className={`${styles.formContainer} ${type === 'signup' ? styles.signUp : styles.signIn}`}>
@@ -43,13 +43,25 @@ const AuthForm = ({ type, title, subtitle, inputs, buttonText, showForgot, onSub
             borderRadius: '8px',
             border: '1px solid rgba(255,107,107,0.3)',
             marginBottom: '8px',
-            textAlign: 'center'
+            textAlign: 'center',
+            width: '100%'
           }}>
             {error}
           </div>
         )}
 
-        {showForgot && <a href="#" className={styles.forgot}>Forgot Password?</a>}
+        {showForgot && (
+          <button 
+            type="button" 
+            onClick={onForgotClick} 
+            className={styles.forgot}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}
+          >
+            Forgot Password?
+          </button>
+        )}
+        
+        {children}
         
         <button type="submit" className={styles.authButton} disabled={isLoading}
           style={{ opacity: isLoading ? 0.7 : 1 }}>
