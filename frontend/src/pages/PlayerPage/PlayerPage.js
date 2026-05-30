@@ -51,7 +51,7 @@ const getSimulatedLyrics = (songTitle, artistName) => {
 
 const PlayerPage = () => {
   const navigate = useNavigate();
-  const { user, logOut, likeSong, unlikeSong, getLikedSongs } = useAuth();
+  const { user, logOut, likeSong, unlikeSong, likedSongsList, likedSongIds } = useAuth();
   
   const { 
     currentSong, isPlaying, queue, currentIndex, duration, currentTime,
@@ -61,16 +61,14 @@ const PlayerPage = () => {
   } = usePlayback();
 
   const [activeTab, setActiveTab] = useState('upnext'); // 'upnext' | 'lyrics' | 'info'
-  const [likedSongsList, setLikedSongsList] = useState([]);
-  const [localLikedIds, setLocalLikedIds] = useState(new Set());
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // Uses global hoisted Likes state from AuthContext
   const [prevVolume, setPrevVolume] = useState(0.8);
   const lyricsContainerRef = useRef(null);
 
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
   const songTitle = currentSong ? currentSong.track_name : "Không có bài hát";
   const songArtist = currentSong ? currentSong.artists : "Chọn một bài hát để bắt đầu";
-  const coverUrl = currentSong ? getCoverImage(currentSong.track_id) : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500";
+  const coverUrl = currentSong?.cover_url || (currentSong ? getCoverImage(currentSong.track_id) : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500");
 
   // Lyrics calculation
   const lyrics = currentSong ? getSimulatedLyrics(songTitle, songArtist) : [];
@@ -79,19 +77,7 @@ const PlayerPage = () => {
     return currentTime >= l.time && (!nextL || currentTime < nextL.time);
   });
 
-  // Fetch likes
-  useEffect(() => {
-    const fetchLikes = async () => {
-      try {
-        const liked = await getLikedSongs();
-        setLikedSongsList(liked);
-        setLocalLikedIds(new Set(liked.map(s => s.track_id)));
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    if (user) fetchLikes();
-  }, [user, refreshTrigger]);
+  // Handled by AuthContext lifecycle
 
   // Autoscroll lyrics
   useEffect(() => {
@@ -105,22 +91,11 @@ const PlayerPage = () => {
 
   const handleLike = async () => {
     if (!currentSong || !user) return;
-    const isLiked = localLikedIds.has(currentSong.track_id);
-    try {
-      setLocalLikedIds(prev => {
-        const next = new Set(prev);
-        if (isLiked) next.delete(currentSong.track_id);
-        else next.add(currentSong.track_id);
-        return next;
-      });
-      if (isLiked) {
-        await unlikeSong(currentSong.track_id);
-      } else {
-        await likeSong(currentSong);
-      }
-      setRefreshTrigger(prev => prev + 1);
-    } catch (err) {
-      console.error(err);
+    const isLiked = likedSongIds.has(currentSong.track_id);
+    if (isLiked) {
+      await unlikeSong(currentSong.track_id);
+    } else {
+      await likeSong(currentSong);
     }
   };
 
@@ -198,11 +173,11 @@ const PlayerPage = () => {
               <div className={styles.titleRow}>
                 <h1 className={styles.songTitleText}>{songTitle}</h1>
                 <button 
-                  className={`${styles.likeBtn} ${localLikedIds.has(currentSong?.track_id) ? styles.liked : ''}`}
+                  className={`${styles.likeBtn} ${likedSongIds.has(currentSong?.track_id) ? styles.liked : ''}`}
                   onClick={handleLike}
                   disabled={!currentSong}
                 >
-                  <Heart size={26} fill={localLikedIds.has(currentSong?.track_id) ? "#ef4444" : "transparent"} />
+                  <Heart size={26} fill={likedSongIds.has(currentSong?.track_id) ? "#ef4444" : "transparent"} />
                 </button>
               </div>
               <p className={styles.songArtistText}>{songArtist}</p>
@@ -329,7 +304,7 @@ const PlayerPage = () => {
                               idx + 1
                             )}
                           </span>
-                          <img src={getCoverImage(song.track_id)} alt={song.track_name} className={styles.queueThumb} />
+                          <img src={song.cover_url || getCoverImage(song.track_id)} alt={song.track_name} className={styles.queueThumb} />
                           <div className={styles.queueInfo}>
                             <h4 className={styles.queueTitle}>{song.track_name}</h4>
                             <p className={styles.queueArtist}>{song.artists}</p>

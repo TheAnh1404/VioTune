@@ -32,16 +32,40 @@ export const PlaybackProvider = ({ children }) => {
     if (!song) return null;
     const cacheKey = song.track_id;
     if (previewCache.current[cacheKey] !== undefined) {
-      return previewCache.current[cacheKey];
+      const cached = previewCache.current[cacheKey];
+      if (cached && cached.cover_url) {
+        song.cover_url = cached.cover_url;
+      }
+      return cached ? cached.preview_url : null;
     }
     try {
       setPreviewLoading(true);
       const url = `http://127.0.0.1:8000/songs/preview?track_name=${encodeURIComponent(song.track_name)}&artist=${encodeURIComponent(song.artists)}`;
       const res = await fetch(url);
       const json = await res.json();
-      const preview = json?.data?.preview_url || null;
-      previewCache.current[cacheKey] = preview;
-      return preview;
+      
+      if (json.status === "success" && json.data) {
+        const preview = json.data.preview_url || null;
+        const cover = json.data.cover_url || null;
+        
+        previewCache.current[cacheKey] = {
+          preview_url: preview,
+          cover_url: cover
+        };
+        
+        // Append cover_url to current song dynamically in state
+        if (cover) {
+          setCurrentSong(prev => {
+            if (prev && prev.track_id === song.track_id) {
+              return { ...prev, cover_url: cover };
+            }
+            return prev;
+          });
+        }
+        return preview;
+      }
+      previewCache.current[cacheKey] = null;
+      return null;
     } catch (err) {
       console.warn('Preview fetch failed:', err);
       previewCache.current[cacheKey] = null;

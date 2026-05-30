@@ -1,17 +1,39 @@
 import os
+import sys
+
+# Configure UTF-8 encoding for Windows terminals to prevent UnicodeEncodeError
+try:
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from dotenv import load_dotenv
 
-# ===== ĐƯỜNG DẪN =====
+# Load environment variables
 current_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(current_dir, "../.env"))
+db_path = os.path.join(current_dir, "../data/viotune.db")
 songs_path = os.path.join(current_dir, "../data/dataset.csv")
 interactions_path = os.path.join(current_dir, "../data/interactions.csv")
 models_dir = os.path.join(current_dir, "../models")
 os.makedirs(models_dir, exist_ok=True)
 
 # ===== LOAD DỮ LIỆU =====
-songs = pd.read_csv(songs_path)
+try:
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    songs = pd.read_sql("SELECT * FROM songs", conn)
+    conn.close()
+except Exception as e:
+    print(f"[CF] Error loading dataset from SQLite: {e}")
+    songs = pd.read_csv(songs_path)
+
 interactions = pd.read_csv(interactions_path)
 
 # ===== TIỀN XỬ LÝ =====
@@ -150,6 +172,40 @@ class SVDModel:
         scores.sort(key=lambda x: x[1], reverse=True)
         return scores
 
+    def compute_user_latent_vector(self, user_ratings, n_iterations=30):
+        """
+        [Fold-in Projection] Tính toán vector biểu diễn ẩn P_u và bias b_u cho người dùng thời gian thực
+        dựa trên lịch sử tương tác cá nhân (listened/likes) và ma trận bài hát ẩn Q của mô hình.
+        Phương pháp tối ưu hóa bằng Stochastic Gradient Descent (SGD) trên duy nhất tập dữ liệu người dùng.
+        """
+        p_u = np.zeros(self.k)
+        b_u = 0.0
+        
+        for _ in range(n_iterations):
+            for i_idx, r in user_ratings:
+                pred = self.mu + b_u + self.b_i[i_idx] + self.Q[i_idx].dot(p_u)
+                e = r - pred
+                
+                # Cập nhật bias và latent factors cho người dùng đơn lẻ
+                b_u += self.lr * (e - self.reg * b_u)
+                p_u += self.lr * (e * self.Q[i_idx] - self.reg * p_u)
+                
+        return p_u, b_u
+
+    def predict_for_user_vector(self, p_u, b_u, listened_item_indices):
+        """
+        Dự đoán điểm số cho toàn bộ bài hát chưa nghe dựa trên vector latent p_u và bias b_u
+        được chiếu (projected) thời gian thực của người dùng.
+        """
+        listened_set = set(listened_item_indices)
+        scores = []
+        for i in range(self.Q.shape[0]):
+            if i not in listened_set:
+                score = self.mu + b_u + self.b_i[i] + self.Q[i].dot(p_u)
+                scores.append((i, score))
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return scores
+
     def save(self, save_dir):
         """Lưu ma trận P, Q và bias vào thư mục models/."""
         np.save(os.path.join(save_dir, "P.npy"), self.P)
@@ -187,25 +243,85 @@ else:
     svd.save(models_dir)
 
 
-# ===== LẤY TƯƠNG TÁC TỪ FIRESTORE QUA REST API =====
+# ===== LẤY TƯƠNG TÁC TỪ FIRESTORE QUA SDK HOẶC REST PHÂN TRANG =====
 def fetch_firestore_interactions():
+    import os
     import requests
-    project_id = "viotune-music"
-    url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/users"
+    
+    # Load .env configurations
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "viotune-music")
+    credentials_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
     
     new_interactions = []
-    try:
-        resp = requests.get(url, timeout=4)
-        if resp.status_code == 200:
+    
+    # 1. Thử dùng Official SDK nếu có cấu hình credentials
+    if credentials_path and os.path.exists(credentials_path):
+        try:
+            from google.oauth2 import service_account
+            from google.cloud import firestore
+            
+            print("[Firestore SDK] Đang kết nối bằng Google Cloud SDK...")
+            credentials = service_account.Credentials.from_service_account_file(credentials_path)
+            db = firestore.Client(project=project_id, credentials=credentials)
+            
+            users_ref = db.collection("users")
+            for doc_item in users_ref.stream():
+                uid = doc_item.id
+                data = doc_item.to_dict()
+                
+                # Likes: 5 điểm tương tác
+                liked_songs = data.get("likedSongs", [])
+                for song in liked_songs:
+                    track_id = song.get("track_id")
+                    if track_id:
+                        new_interactions.append({
+                            "user_id": str(uid),
+                            "track_id": track_id,
+                            "play_count": 5
+                        })
+                        
+                # Lịch sử phát: 1 điểm mỗi lượt
+                play_history = data.get("playHistory", [])
+                for song in play_history:
+                    track_id = song.get("track_id")
+                    if track_id:
+                        new_interactions.append({
+                            "user_id": str(uid),
+                            "track_id": track_id,
+                            "play_count": 1
+                        })
+            
+            print(f"[Firestore SDK] Đồng bộ thành công {len(new_interactions)} tương tác.")
+            return pd.DataFrame(new_interactions)
+            
+        except Exception as sdk_err:
+            print(f"[Firestore SDK] Lỗi SDK: {sdk_err}. Chuyển sang dùng REST phân trang...")
+            
+    # 2. Cơ chế dự phòng REST API Phân trang (Resilient Paginated REST Fallback)
+    print("[Firestore REST] Đang đồng bộ bằng REST API có phân trang...")
+    url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/users"
+    page_token = None
+    
+    while True:
+        try:
+            params = {}
+            if page_token:
+                params["pageToken"] = page_token
+            
+            resp = requests.get(url, params=params, timeout=5)
+            if resp.status_code != 200:
+                print(f"[Firestore REST] Lỗi mã phản hồi: {resp.status_code}")
+                break
+                
             data = resp.json()
             documents = data.get("documents", [])
+            
             for doc_item in documents:
                 name_path = doc_item.get("name", "")
                 uid = name_path.split("/")[-1]
-                
                 fields = doc_item.get("fields", {})
                 
-                # 1. Thích bài hát = 5 điểm tương tác
+                # Lấy lượt thích
                 liked_songs = fields.get("likedSongs", {}).get("arrayValue", {}).get("values", [])
                 for song_val in liked_songs:
                     song_fields = song_val.get("mapValue", {}).get("fields", {})
@@ -217,7 +333,7 @@ def fetch_firestore_interactions():
                             "play_count": 5
                         })
                 
-                # 2. Nghe bài hát = 1 điểm tương tác cho mỗi mục trong lịch sử nghe
+                # Lấy lịch sử phát
                 play_history = fields.get("playHistory", {}).get("arrayValue", {}).get("values", [])
                 for play_val in play_history:
                     play_fields = play_val.get("mapValue", {}).get("fields", {})
@@ -228,82 +344,75 @@ def fetch_firestore_interactions():
                             "track_id": track_id,
                             "play_count": 1
                         })
-        else:
-            print(f"[Firestore REST] Error code: {resp.status_code}")
-    except Exception as e:
-        print(f"[Firestore REST] Failed to fetch: {e}")
-        
+                        
+            # Lấy token trang tiếp theo
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                break
+                
+        except Exception as e:
+            print(f"[Firestore REST] Lỗi đồng bộ: {e}")
+            break
+            
+    print(f"[Firestore REST] Đồng bộ thành công {len(new_interactions)} tương tác.")
     return pd.DataFrame(new_interactions)
 
 
 # ===== HÀM GỢI Ý CF TÍCH HỢP HUẤN LUYỆN TRỰC TUYẾN THỜI GIAN THỰC =====
 def recommend_cf(user_id, top_n=5):
     """
-    Tự động gộp dữ liệu tương tác thực tế từ Cloud Firestore,
-    huấn luyện lại mô hình SVD một cách nhanh chóng và đưa ra kết quả gợi ý.
+    Hệ thống gợi ý Collaborative Filtering sử dụng phương pháp chiếu vector người dùng thời gian thực (Fold-in Projection).
+    Đồng bộ trực tiếp lượt nghe/like từ Firestore, tính toán P_u & b_u tức thời (<1ms) mà không cần huấn luyện lại SVD.
     """
-    global user_index, track_index, index_to_track, interactions, svd
+    global user_index, track_index, index_to_track, svd
     
-    # 1. Đọc dữ liệu nền lớn
-    base_interactions = pd.read_csv(interactions_path)
-    
-    # 2. Đọc tương tác thời gian thực từ Firestore
-    firestore_df = fetch_firestore_interactions()
-    
-    # 3. Gộp dữ liệu
-    if not firestore_df.empty:
-        # Chuyển user_id bên base thành chuỗi để gộp đồng bộ
-        base_interactions["user_id"] = base_interactions["user_id"].astype(str)
-        # Gộp nhóm để tính tổng play_count cho từng cặp (user, track)
-        combined = pd.concat([base_interactions, firestore_df], ignore_index=True)
-        interactions = combined.groupby(["user_id", "track_id"], as_index=False)["play_count"].sum()
-    else:
-        interactions = base_interactions
-        interactions["user_id"] = interactions["user_id"].astype(str)
-        
-    # Tính rating bằng Log Normalization
-    interactions["rating"] = np.log1p(interactions["play_count"])
-    
-    # 4. Tái cơ cấu chỉ mục (để nhận cả user UID dạng chuỗi của Firebase!)
-    u_ids = interactions["user_id"].unique()
-    t_ids = interactions["track_id"].unique()
-    
-    user_index = {uid: i for i, uid in enumerate(u_ids)}
-    track_index = {tid: i for i, tid in enumerate(t_ids)}
-    index_to_track = {i: tid for tid, i in track_index.items()}
-    
-    interactions["u_idx"] = interactions["user_id"].map(user_index)
-    interactions["i_idx"] = interactions["track_id"].map(track_index)
-    
-    n_users = len(u_ids)
-    n_items = len(t_ids)
-    
-    # 5. Huấn luyện lại mô hình SVD với kích thước mới (10 epochs để chạy cực nhanh trong 0.2s)
-    svd = SVDModel(n_users=n_users, n_items=n_items, k=50, lr=0.005, reg=0.02, n_epochs=10)
-    svd.fit(interactions)
-    
-    # 6. Kiểm tra xem user có tương tác nào trong hệ thống không
     user_id_str = str(user_id)
-    if user_id_str not in user_index:
-        # Giải quyết Cold Start: Gợi ý các bài hát có độ phổ biến cao nhất
-        popular_songs = songs.sort_values(by="popularity", ascending=False).head(top_n)
-        return popular_songs[["track_id", "track_name", "artists", "track_genre", "popularity"]]
+    
+    try:
+        firestore_df = fetch_firestore_interactions()
+    except Exception as e:
+        print(f"[CF] Lỗi lấy tương tác Firestore: {e}")
+        firestore_df = pd.DataFrame()
         
-    u_idx = user_index[user_id_str]
+    user_ratings = []
+    listened_indices = []
     
-    # Lấy các bài hát đã nghe của user này
-    user_rows = interactions[interactions["user_id"] == user_id_str]
-    listened_indices = [
-        track_index[tid] for tid in user_rows["track_id"].values
-        if tid in track_index
-    ]
-    
-    # Dự đoán điểm cho bài chưa nghe và sắp xếp
-    top_scores = svd.predict_for_user(u_idx, listened_indices)[:top_n]
+    if not firestore_df.empty:
+        user_rows = firestore_df[firestore_df["user_id"] == user_id_str]
+        if not user_rows.empty:
+            for _, row in user_rows.iterrows():
+                tid = row["track_id"]
+                if tid in track_index:
+                    t_idx = track_index[tid]
+                    r = np.log1p(row["play_count"])
+                    user_ratings.append((t_idx, r))
+                    listened_indices.append(t_idx)
+
+    # 2. Nếu tìm thấy tương tác thời gian thực, tiến hành chiếu Fold-in
+    if user_ratings:
+        p_u, b_u = svd.compute_user_latent_vector(user_ratings, n_iterations=30)
+        top_scores = svd.predict_for_user_vector(p_u, b_u, listened_indices)[:top_n]
+    else:
+        # 3. Dự phòng 1: Nếu không có tương tác mới nhưng là user cũ trong base dataset
+        if user_id_str in user_index:
+            u_idx = user_index[user_id_str]
+            # Lấy danh sách bài hát đã nghe của user này trong base dataset
+            base_interactions = pd.read_csv(interactions_path)
+            base_interactions["user_id"] = base_interactions["user_id"].astype(str)
+            base_user_rows = base_interactions[base_interactions["user_id"] == user_id_str]
+            base_listened = [
+                track_index[tid] for tid in base_user_rows["track_id"].values
+                if tid in track_index
+            ]
+            top_scores = svd.predict_for_user(u_idx, base_listened)[:top_n]
+        else:
+            # 4. Dự phòng 2 (Cold Start): Gợi ý bài hát có độ phổ biến cao nhất
+            popular_songs = songs.sort_values(by="popularity", ascending=False).head(top_n)
+            return popular_songs[["track_id", "track_name", "artists", "track_genre", "popularity"]]
+            
+    # Lấy thông tin bài hát từ chỉ mục
     top_track_ids = [index_to_track[i] for i, _ in top_scores]
-    
     result = songs[songs["track_id"].isin(top_track_ids)][
         ["track_id", "track_name", "artists", "track_genre", "popularity"]
     ]
-    
     return result

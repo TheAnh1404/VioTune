@@ -1,4 +1,19 @@
 import os
+import sys
+
+# Configure UTF-8 encoding for Windows terminals to prevent UnicodeEncodeError
+try:
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
+
+# Lấy đường dẫn tuyệt đối để load dataset
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
 from src.content_based import recommend
 from src.collaborative import recommend_cf
 from src.hybrid import hybrid_recommend

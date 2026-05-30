@@ -28,8 +28,8 @@ const getCoverImage = (trackId) => {
 
 const SearchPage = () => {
   const navigate = useNavigate();
-  const { user, logOut, likeSong, unlikeSong, getLikedSongs } = useAuth();
-  const { playSong, currentSong, likedSongIds = new Set(), refreshLikes, setRefreshLikes } = usePlayback();
+  const { user, logOut, likeSong, unlikeSong, likedSongsList, likedSongIds } = useAuth();
+  const { playSong, currentSong } = usePlayback();
 
   const userId = user?.uid || 'anonymous';
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
@@ -37,22 +37,7 @@ const SearchPage = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [likedSongsList, setLikedSongsList] = useState([]);
-  const [localLikedIds, setLocalLikedIds] = useState(new Set());
-
-  // Fetch likes
-  useEffect(() => {
-    const fetchLikes = async () => {
-      try {
-        const liked = await getLikedSongs();
-        setLikedSongsList(liked);
-        setLocalLikedIds(new Set(liked.map(s => s.track_id)));
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    if (user) fetchLikes();
-  }, [user, refreshLikes]);
+  // Global hoisted likes state from AuthContext replaces local states
 
   // Search API Call
   useEffect(() => {
@@ -86,22 +71,11 @@ const SearchPage = () => {
   const handleLike = async (e, song) => {
     e.stopPropagation();
     if (!user) return;
-    const isLiked = localLikedIds.has(song.track_id);
-    try {
-      setLocalLikedIds(prev => {
-        const next = new Set(prev);
-        if (isLiked) next.delete(song.track_id);
-        else next.add(song.track_id);
-        return next;
-      });
-      if (isLiked) {
-        await unlikeSong(song.track_id);
-      } else {
-        await likeSong(song);
-      }
-      if (setRefreshLikes) setRefreshLikes(prev => prev + 1);
-    } catch (err) {
-      console.error(err);
+    const isLiked = likedSongIds.has(song.track_id);
+    if (isLiked) {
+      await unlikeSong(song.track_id);
+    } else {
+      await likeSong(song);
     }
   };
 
@@ -127,7 +101,7 @@ const SearchPage = () => {
         <SideBarMenu 
           userId={userId}
           likedSongs={likedSongsList}
-          likedSongIds={localLikedIds}
+          likedSongIds={likedSongIds}
           onPlaySong={(song) => {
             playSong(song, likedSongsList);
             navigate('/player');
@@ -155,9 +129,26 @@ const SearchPage = () => {
 
           <div className={styles.resultsSection}>
             {loading && (
-              <div className={styles.loaderContainer}>
-                <div className={styles.spinner}></div>
-                <p>Đang tìm kiếm bài hát...</p>
+              <div className={styles.resultsGridWrapper}>
+                <h2 className={styles.sectionTitle}>Đang tải kết quả...</h2>
+                <div className={styles.resultsGrid}>
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <div key={idx} className={styles.skeletonCard}>
+                      <div className={styles.skeletonImage}>
+                        <div className={styles.shimmer}></div>
+                      </div>
+                      <div className={styles.skeletonTitle}>
+                        <div className={styles.shimmer}></div>
+                      </div>
+                      <div className={styles.skeletonArtist}>
+                        <div className={styles.shimmer}></div>
+                      </div>
+                      <div className={styles.skeletonBadge}>
+                        <div className={styles.shimmer}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -182,8 +173,8 @@ const SearchPage = () => {
                 <h2 className={styles.sectionTitle}>Kết quả tìm kiếm ({results.length})</h2>
                 <div className={styles.resultsGrid}>
                   {results.map((song) => {
-                    const isLiked = localLikedIds.has(song.track_id);
-                    const cover = getCoverImage(song.track_id);
+                    const isLiked = likedSongIds.has(song.track_id);
+                    const cover = song.cover_url || getCoverImage(song.track_id);
                     return (
                       <div 
                         key={song.track_id} 

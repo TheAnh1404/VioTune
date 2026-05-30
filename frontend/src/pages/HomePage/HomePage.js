@@ -25,8 +25,8 @@ import { usePlayback } from '../../context/PlaybackContext';
 const HomePage = () => {
   const navigate = useNavigate();
   
-  // ── Firebase Auth context ────────────────────────────────────────────────────
-  const { user, logOut, likeSong, unlikeSong, getLikedSongs } = useAuth();
+  // ── Firebase Auth context (Hoisted Global State) ──────────────────────────────
+  const { user, logOut, likeSong, unlikeSong, likedSongsList: likedSongs, likedSongIds } = useAuth();
   const userId = user?.uid || 'anonymous';
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
 
@@ -47,29 +47,12 @@ const HomePage = () => {
 
   // Local Interactive States (Non-playback)
   const [trendingSongs, setTrendingSongs] = useState([]);
-  const [likedSongs, setLikedSongs] = useState([]);
-  const [likedSongIds, setLikedSongIds] = useState(new Set());
-  const [refreshLikes, setRefreshLikes] = useState(0);
   const [recentSongs, setRecentSongs] = useState([]);
   const [popularArtists, setPopularArtists] = useState([]);
   
   // Curated playlist states
   const [playlistSongs, setPlaylistSongs] = useState([]);
   const [playlistTitle, setPlaylistTitle] = useState("");
-
-  // ── Load liked songs from Firestore on mount ─────────────────────────────────
-  useEffect(() => {
-    const fetchLikes = async () => {
-      try {
-        const liked = await getLikedSongs();
-        setLikedSongs(liked);
-        setLikedSongIds(new Set(liked.map(s => s.track_id)));
-      } catch (err) {
-        console.error('Error fetching likes from Firestore:', err);
-      }
-    };
-    if (user) fetchLikes();
-  }, [user, refreshLikes]); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   // Fetch popular artists on mount
   useEffect(() => {
@@ -133,33 +116,14 @@ const HomePage = () => {
     navigate('/player');
   };
 
-  // ── Like / Unlike using Firestore ───────────────────────────────────────────
+  // ── Like / Unliked Song (Directly using global context) ──────────────────────
   const handleLikeSong = async (song) => {
     if (!user) return;
     const isLiked = likedSongIds.has(song.track_id);
-    try {
-      setLikedSongIds(prev => {
-        const next = new Set(prev);
-        if (isLiked) next.delete(song.track_id);
-        else next.add(song.track_id);
-        return next;
-      });
-
-      if (isLiked) {
-        await unlikeSong(song.track_id);
-      } else {
-        await likeSong(song);
-      }
-      setRefreshLikes(prev => prev + 1);
-    } catch (err) {
-      console.error('Like/unlike failed:', err);
-      // Revert on error
-      setLikedSongIds(prev => {
-        const next = new Set(prev);
-        if (isLiked) next.add(song.track_id);
-        else next.delete(song.track_id);
-        return next;
-      });
+    if (isLiked) {
+      await unlikeSong(song.track_id);
+    } else {
+      await likeSong(song);
     }
   };
 
@@ -206,7 +170,7 @@ const HomePage = () => {
           userId={userId}
           likedSongs={likedSongs}
           likedSongIds={likedSongIds}
-          refreshTrigger={refreshLikes}
+          refreshTrigger={likedSongs?.length || 0}
           onPlaySong={handlePlaySong}
           currentSong={currentSong}
         />

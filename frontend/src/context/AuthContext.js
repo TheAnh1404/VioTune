@@ -27,11 +27,29 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);          // Firebase user object
   const [loading, setLoading] = useState(true);    // initial auth check
+  const [likedSongsList, setLikedSongsList] = useState([]);
+  const [likedSongIds, setLikedSongIds] = useState(new Set());
 
   // ── Listen to Firebase auth state ──────────────────────────────────────────
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      if (firebaseUser) {
+        try {
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          const snap = await getDoc(userRef);
+          if (snap.exists()) {
+            const liked = snap.data().likedSongs || [];
+            setLikedSongsList(liked);
+            setLikedSongIds(new Set(liked.map(s => s.track_id)));
+          }
+        } catch (err) {
+          console.warn("Failed to fetch liked songs on login:", err);
+        }
+      } else {
+        setLikedSongsList([]);
+        setLikedSongIds(new Set());
+      }
       setLoading(false);
     });
     return unsub;
@@ -68,26 +86,63 @@ export const AuthProvider = ({ children }) => {
   // ── Like / Unlike a Song ────────────────────────────────────────────────────
   const likeSong = async (track) => {
     if (!user) return;
-    const userRef = doc(db, 'users', user.uid);
-    await updateDoc(userRef, {
-      likedSongs: arrayUnion({
-        track_id: track.track_id,
-        track_name: track.track_name,
-        artists: track.artists,
-        track_genre: track.track_genre || '',
-        likedAt: new Date().toISOString()
-      })
-    });
+    
+    // Optimistic Update
+    const newTrack = {
+      track_id: track.track_id,
+      track_name: track.track_name,
+      artists: track.artists,
+      track_genre: track.track_genre || '',
+      likedAt: new Date().toISOString()
+    };
+    
+    setLikedSongsList(prev => [...prev, newTrack]);
+    setLikedSongIds(prev => new Set([...prev, track.track_id]));
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        likedSongs: arrayUnion(newTrack)
+      });
+    } catch (err) {
+      console.warn("Firestore like update failed, reverting optimistic state:", err);
+      // Revert on failure
+      setLikedSongsList(prev => prev.filter(s => s.track_id !== track.track_id));
+      setLikedSongIds(prev => {
+        const next = new Set(prev);
+        next.delete(track.track_id);
+        return next;
+      });
+    }
   };
 
   const unlikeSong = async (trackId) => {
     if (!user) return;
-    const userRef = doc(db, 'users', user.uid);
-    // We store objects so we need to read first and filter
-    const snap = await getDoc(userRef);
-    if (!snap.exists()) return;
-    const liked = (snap.data().likedSongs || []).filter(s => s.track_id !== trackId);
-    await updateDoc(userRef, { likedSongs: liked });
+    
+    // Keep reference for reverting on error
+    const removedSong = likedSongsList.find(s => s.track_id === trackId);
+    
+    // Optimistic Update
+    setLikedSongsList(prev => prev.filter(s => s.track_id !== trackId));
+    setLikedSongIds(prev => {
+      const next = new Set(prev);
+      next.delete(trackId);
+      return next;
+    });
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const snap = await getDoc(userRef);
+      if (!snap.exists()) return;
+      const liked = (snap.data().likedSongs || []).filter(s => s.track_id !== trackId);
+      await updateDoc(userRef, { likedSongs: liked });
+    } catch (err) {
+      console.warn("Firestore unlike update failed, reverting optimistic state:", err);
+      if (removedSong) {
+        setLikedSongsList(prev => [...prev, removedSong]);
+        setLikedSongIds(prev => new Set([...prev, trackId]));
+      }
+    }
   };
 
   // ── Get Liked Songs from Firestore ──────────────────────────────────────────
@@ -107,7 +162,6 @@ export const AuthProvider = ({ children }) => {
       artists: track.artists,
       playedAt: new Date().toISOString()
     };
-    // Keep last 50 plays in the array (append, then we trim via cloud logic or on read)
     const snap = await getDoc(userRef);
     const history = snap.exists() ? (snap.data().playHistory || []) : [];
     const updated = [entry, ...history].slice(0, 50);
@@ -124,6 +178,8 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    likedSongsList,
+    likedSongIds,
     signUp,
     signIn,
     logOut,
