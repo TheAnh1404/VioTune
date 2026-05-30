@@ -2,18 +2,21 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getAnalytics } from 'firebase/analytics';
 
 const firebaseConfig = {
-  projectId: "viotune-music",
-  appId: "1:939519872926:web:1791e7b753558be6cf908f",
-  storageBucket: "viotune-music.firebasestorage.app",
-  apiKey: "AIzaSyDCMRWAqGyc2lYISsMzRLmftFLo6IA706g",
-  authDomain: "viotune-music.firebaseapp.com",
-  messagingSenderId: "939519872926",
+  apiKey: "AIzaSyDfg87gFXYnAGRMO0j-dhHBOTj2IaoYFd4",
+  authDomain: "viotuneteam6.firebaseapp.com",
+  projectId: "viotuneteam6",
+  storageBucket: "viotuneteam6.firebasestorage.app",
+  messagingSenderId: "128179150459",
+  appId: "1:128179150459:web:70ddf9babbb5645c304cde",
+  measurementId: "G-6LYSJ4LY2J"
 };
 
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const analytics = getAnalytics(app);
 export default app;
