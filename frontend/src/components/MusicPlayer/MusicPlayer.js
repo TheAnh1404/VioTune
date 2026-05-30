@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './MusicPlayer.module.css';
 import { 
   SkipBack, SkipForward, Pause, Play, 
-  Repeat1, ListMusic, Volume2 
+  Repeat, Shuffle, ListMusic, Volume2, VolumeX 
 } from 'lucide-react';
 
 const getCoverImage = (trackId, genre) => {
@@ -28,13 +28,70 @@ const getCoverImage = (trackId, genre) => {
   return images[index];
 };
 
-const MusicPlayer = ({ currentSong, isPlaying, onTogglePlay }) => {
+const formatTime = (seconds) => {
+  if (isNaN(seconds) || seconds === null) return "00:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
+
+const MusicPlayer = ({ 
+  currentSong, 
+  isPlaying, 
+  onTogglePlay,
+  duration = 0,
+  currentTime = 0,
+  onSeek,
+  onNext,
+  onPrev,
+  repeatMode = 'off',
+  isShuffle = false,
+  onToggleRepeat,
+  onToggleShuffle,
+  onToggleQueue,
+  showQueue = false,
+  volume = 0.8,
+  onVolumeChange
+}) => {
   const songTitle = currentSong ? currentSong.track_name : "No song playing";
   const songArtist = currentSong ? currentSong.artists : "Select a song to start listening";
   const songGenre = currentSong ? currentSong.track_genre : "";
   const coverUrl = currentSong 
     ? getCoverImage(currentSong.track_id, currentSong.track_genre)
     : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=100";
+
+  const [prevVolume, setPrevVolume] = useState(0.8);
+
+  const handleMuteToggle = () => {
+    if (volume > 0) {
+      setPrevVolume(volume);
+      if (onVolumeChange) onVolumeChange(0);
+    } else {
+      if (onVolumeChange) onVolumeChange(prevVolume > 0 ? prevVolume : 0.8);
+    }
+  };
+
+  const handleProgressClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const clickRatio = clickX / width;
+    if (onSeek && duration > 0) {
+      onSeek(clickRatio * duration);
+    }
+  };
+
+  const handleVolumeClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const clickRatio = Math.max(0, Math.min(1, clickX / width));
+    if (onVolumeChange) {
+      onVolumeChange(clickRatio);
+    }
+  };
+
+  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className={styles.playerWrapper}>
@@ -46,8 +103,8 @@ const MusicPlayer = ({ currentSong, isPlaying, onTogglePlay }) => {
           className={styles.albumArt} 
         />
         <div className={styles.textGroup}>
-          <h4 className={styles.title}>{songTitle}</h4>
-          <span className={styles.artist}>
+          <h4 className={styles.title} title={songTitle}>{songTitle}</h4>
+          <span className={styles.artist} title={songArtist}>
             {songArtist} {songGenre && `• ${songGenre}`}
           </span>
         </div>
@@ -56,7 +113,13 @@ const MusicPlayer = ({ currentSong, isPlaying, onTogglePlay }) => {
       {/* Cột giữa: Điều khiển và Thanh tiến trình */}
       <div className={styles.controlsContainer}>
         <div className={styles.mainButtons}>
-          <SkipBack size={24} className={styles.icon} />
+          <Shuffle 
+            size={20} 
+            className={`${styles.icon} ${isShuffle ? styles.activeIcon : ''}`} 
+            onClick={onToggleShuffle}
+            title={isShuffle ? "Shuffle On" : "Shuffle Off"}
+          />
+          <SkipBack size={24} className={styles.icon} onClick={onPrev} title="Previous Song" />
           <div className={styles.playPauseBtn} onClick={onTogglePlay} style={{ cursor: 'pointer' }}>
             {isPlaying && currentSong ? (
               <Pause size={30} fill="currentColor" />
@@ -64,26 +127,43 @@ const MusicPlayer = ({ currentSong, isPlaying, onTogglePlay }) => {
               <Play size={30} fill="currentColor" style={{ marginLeft: '4px' }} />
             )}
           </div>
-          <SkipForward size={24} className={styles.icon} />
+          <SkipForward size={24} className={styles.icon} onClick={onNext} title="Next Song" />
+          <Repeat 
+            size={20} 
+            className={`${styles.icon} ${repeatMode !== 'off' ? styles.activeIcon : ''}`} 
+            onClick={onToggleRepeat}
+            title={`Repeat Mode: ${repeatMode.toUpperCase()}`}
+          />
         </div>
 
         <div className={styles.progressWrapper}>
-          <span className={styles.time}>{isPlaying && currentSong ? "00:42" : "00:00"}</span>
-          <div className={styles.progressBar}>
-            <div className={`${styles.progressFill} ${isPlaying && currentSong ? styles.playingProgress : ''}`} />
+          <span className={styles.time}>{formatTime(currentTime)}</span>
+          <div className={styles.progressBar} onClick={handleProgressClick}>
+            <div 
+              className={styles.progressFill} 
+              style={{ width: `${progressPercent}%`, transition: 'none' }} 
+            />
           </div>
-          <span className={styles.time}>{currentSong ? "03:45" : "00:00"}</span>
+          <span className={styles.time}>{formatTime(duration)}</span>
         </div>
       </div>
 
       {/* Cột phải: Volume và Tiện ích */}
       <div className={styles.utilities}>
-        <Repeat1 size={20} className={styles.icon} />
-        <ListMusic size={20} className={styles.icon} />
+        <ListMusic 
+          size={20} 
+          className={`${styles.icon} ${showQueue ? styles.activeIcon : ''}`} 
+          onClick={onToggleQueue}
+          title="Play Queue"
+        />
         <div className={styles.volumeGroup}>
-          <Volume2 size={20} className={styles.icon} />
-          <div className={styles.volumeBar}>
-            <div className={styles.volumeFill} style={{ width: '80%' }} />
+          {volume === 0 ? (
+            <VolumeX size={20} className={styles.icon} onClick={handleMuteToggle} title="Unmute" />
+          ) : (
+            <Volume2 size={20} className={styles.icon} onClick={handleMuteToggle} title="Mute" />
+          )}
+          <div className={styles.volumeBar} onClick={handleVolumeClick}>
+            <div className={styles.volumeFill} style={{ width: `${volume * 100}%` }} />
           </div>
         </div>
       </div>

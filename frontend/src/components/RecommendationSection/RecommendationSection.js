@@ -53,7 +53,7 @@ const RecommendationSection = ({ currentSong, onPlaySong, likedSongIds = new Set
       setLoading(true);
       try {
         let url = "";
-        if (currentSong) {
+        if (currentSong && currentSong.track_id) {
           url = `http://127.0.0.1:8000/recommend/content?song_id=${currentSong.track_id}&top_n=6`;
         } else {
           url = `http://127.0.0.1:8000/songs/random?limit=6`;
@@ -95,7 +95,7 @@ const RecommendationSection = ({ currentSong, onPlaySong, likedSongIds = new Set
             <RecommendCard 
               key={song.track_id} 
               song={song}
-              onPlaySong={onPlaySong}
+              onPlaySong={(s) => onPlaySong && onPlaySong(s, recs)}
               isLiked={likedSongIds.has(song.track_id)}
               onLikeSong={onLikeSong}
             />

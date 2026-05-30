@@ -46,21 +46,77 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .placeholderLeft {
-  width: 950px;
-  flex-shrink: 0;
-  max-width: 100%;
-  min-height: 50vw; /* Dummy height so page requires scrolling */
-}
-
-.rightSection {
-  width: 352px;
-  height: 754px;
-  flex-shrink: 0;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  position: sticky;
-  top: 0;
+  gap: 32px;
+}
+
+/* Slide-out Queue Panel Drawer */
+.queueDrawer {
+  position: fixed;
+  top: 90px; /* layout right under Header */
+  right: -400px; /* hidden off-screen by default */
+  bottom: 120px; /* leaves breathing room for MusicPlayer */
+  width: 360px;
+  z-index: 999;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  border-radius: 20px;
+}
+
+.queueDrawerOpen {
+  right: 24px; /* slides gracefully into view */
+}
+
+/* ==========================================================================
+   Premium Responsive Media Queries for Mobile/Tablet Optimization
+   ========================================================================== */
+@media (max-width: 1200px) {
+  .placeholderLeft {
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* Tablet optimization */
+  .topSplit {
+    gap: 16px;
+  }
+  .queueDrawer {
+    width: 320px;
+  }
+  .queueDrawerOpen {
+    right: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile phone optimization */
+  .mainContent {
+    padding: 0 16px 16px 16px;
+    gap: 24px;
+  }
+  
+  .placeholderLeft {
+    gap: 24px;
+  }
+  
+  .queueDrawer {
+    width: calc(100% - 32px);
+    left: 16px;
+    right: -100%;
+    bottom: 130px;
+  }
+  
+  .queueDrawerOpen {
+    right: 16px;
+    left: 16px;
+  }
 }

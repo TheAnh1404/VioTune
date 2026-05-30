@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './RecentAlbums.module.css';
 import { Heart } from 'lucide-react';
 
-const AlbumCard = ({ title, artist, coverUrl }) => (
-  <div className={styles.card}>
+const AlbumCard = ({ title, artist, coverUrl, onClick }) => (
+  <div className={styles.card} onClick={onClick} style={{ cursor: 'pointer' }}>
     <div className={styles.albumWrapper}>
       <img src={coverUrl} alt={title} className={styles.cover} />
       <div className={styles.vinylDisc}>
@@ -16,21 +16,33 @@ const AlbumCard = ({ title, artist, coverUrl }) => (
       <p className={styles.artist}>{artist}</p>
     </div>
 
-    <div className={styles.heartIcon}>
+    <div className={styles.heartIcon} onClick={(e) => e.stopPropagation()}>
       <Heart size={20} />
     </div>
   </div>
 );
 
-const RecentAlbums = () => {
-  const albums = [
-    { id: 1, title: 'The Torture...', artist: 'Taylor Swift', coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=200' },
-    { id: 2, title: 'The Torture...', artist: 'Taylor Swift', coverUrl: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=200' },
-    { id: 3, title: 'The Torture...', artist: 'Taylor Swift', coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200' },
-    { id: 4, title: 'The Torture...', artist: 'Taylor Swift', coverUrl: 'https://images.unsplash.com/photo-1459749411177-042180ce673b?w=200' },
-    { id: 5, title: 'The Torture...', artist: 'Taylor Swift', coverUrl: 'https://images.unsplash.com/photo-1514525253361-b83f859b73c0?w=200' },
-    { id: 6, title: 'The Torture...', artist: 'Taylor Swift', coverUrl: 'https://images.unsplash.com/photo-1471478331149-c72f17e33c73?w=200' },
-  ];
+const RecentAlbums = ({ onAlbumClick }) => {
+  const [albums, setAlbums] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchAlbums = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("http://127.0.0.1:8000/albums?limit=6");
+        const json = await res.json();
+        if (json.status === "success") {
+          setAlbums(json.data);
+        }
+      } catch (err) {
+        console.error("Error fetching albums:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAlbums();
+  }, []);
 
   return (
     <section className={styles.sectionContainer}>
@@ -40,14 +52,21 @@ const RecentAlbums = () => {
       </div>
 
       <div className={styles.grid}>
-        {albums.map((album) => (
-          <AlbumCard 
-            key={album.id}
-            title={album.title}
-            artist={album.artist}
-            coverUrl={album.coverUrl}
-          />
-        ))}
+        {loading ? (
+          <p style={{ color: '#a0aec0', padding: '10px' }}>Loading albums...</p>
+        ) : albums.length === 0 ? (
+          <p style={{ color: '#a0aec0', padding: '10px' }}>No albums available.</p>
+        ) : (
+          albums.map((album) => (
+            <AlbumCard 
+              key={album.id}
+              title={album.title}
+              artist={album.artist}
+              coverUrl={album.imageUrl}
+              onClick={() => onAlbumClick && onAlbumClick(album.artist)}
+            />
+          ))
+        )}
       </div>
     </section>
   );

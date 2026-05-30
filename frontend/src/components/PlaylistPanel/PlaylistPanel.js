@@ -101,7 +101,7 @@ const PlaylistPanel = ({ userId = 42, onPlaySong, currentSong, isPlaying, refres
                 <div 
                   key={track.track_id} 
                   className={`${styles.trackItem} ${isCurrent ? styles.activeTrack : ''}`}
-                  onClick={() => onPlaySong && onPlaySong(track)}
+                  onClick={() => onPlaySong && onPlaySong(track, likedSongs)}
                   style={{ cursor: 'pointer' }}
                 >
                   <img src={cover} alt="Track" className={styles.trackThumb} />

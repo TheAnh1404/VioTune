@@ -84,7 +84,7 @@ const PersonalPlaylist = ({ userId = 42, onPlaySong, likedSongIds = new Set(), o
             <PlaylistCard 
               key={song.track_id} 
               song={song} 
-              onPlaySong={onPlaySong}
+              onPlaySong={(s) => onPlaySong && onPlaySong(s, cfRecs)}
               isLiked={likedSongIds.has(song.track_id)}
               onLikeSong={onLikeSong}
             />

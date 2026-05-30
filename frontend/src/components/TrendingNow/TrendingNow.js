@@ -65,23 +65,27 @@ const SongRow = ({ song, onPlaySong, isCurrent, isLiked, onLikeSong }) => {
   );
 };
 
-const TrendingNow = ({ songs = [], title = "Trending Now", onPlaySong, currentSong, likedSongIds = new Set(), onLikeSong }) => {
+const TrendingNow = ({ songs = [], title = "Trending Now", onPlaySong, currentSong, likedSongIds = new Set(), onLikeSong, isLoading = false }) => {
   return (
-    <section className={styles.sectionContainer}>
+    <section className={styles.sectionContainer} id="trending-now-section">
       <div className={styles.header}>
         <h2 className={styles.title}>{title}</h2>
-        {songs.length > 0 && <span className={styles.seeAll}>See All ({songs.length})</span>}
+        {songs.length > 0 && !isLoading && <span className={styles.seeAll}>See All ({songs.length})</span>}
       </div>
 
       <div className={styles.listContainer}>
-        {songs.length === 0 ? (
+        {isLoading ? (
+          <p style={{ color: '#1db954', padding: '30px', textAlign: 'center', fontWeight: '600', fontSize: '15px' }}>
+            🔍 Searching tracks in database...
+          </p>
+        ) : songs.length === 0 ? (
           <p style={{ color: '#a0aec0', padding: '20px', textAlign: 'center' }}>No songs found.</p>
         ) : (
           songs.map(song => (
             <SongRow 
               key={song.track_id} 
               song={song} 
-              onPlaySong={onPlaySong}
+              onPlaySong={(s) => onPlaySong && onPlaySong(s, songs)}
               isCurrent={currentSong && currentSong.track_id === song.track_id}
               isLiked={likedSongIds.has(song.track_id)}
               onLikeSong={onLikeSong}

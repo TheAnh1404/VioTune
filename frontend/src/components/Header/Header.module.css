@@ -61,6 +61,24 @@
   color: #7b8baa;
 }
 
+.clearButton {
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7b8baa;
+  transition: color 0.2s;
+  padding: 0;
+  margin-left: 8px;
+}
+
+.clearButton:hover {
+  color: #fff;
+}
+
 .rightSection {
   display: flex;
   align-items: center;

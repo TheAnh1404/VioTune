@@ -154,3 +154,11 @@
 .icon:hover {
     color: white;
 }
+
+.activeIcon {
+    color: #1db954 !important; /* Premium Spotify green highlight */
+}
+
+.activeIcon:hover {
+    color: #1ed760 !important;
+}

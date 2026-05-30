@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './SideBarMenu.module.css';
 import { 
   Home, Heart, ListMusic, Globe, 
@@ -6,7 +7,6 @@ import {
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, active, expanded, onClick }) => {
-  // Determine CSS classes based on active and expanded state
   let itemClass = styles.menuItem;
   let iconClass = styles.iconInactive;
   
@@ -40,21 +40,57 @@ const SidebarItem = ({ icon: Icon, label, active, expanded, onClick }) => {
   );
 };
 
-const SideBarMenu = () => {
+const SideBarMenu = ({ userId = "42", likedSongIds = new Set(), refreshTrigger = 0, onPlaySong, currentSong }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Home');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [likedSongs, setLikedSongs] = useState([]);
+
+  // Fetch liked songs inside sidebar to display them like Spotify Library
+  useEffect(() => {
+    const fetchLikedSongs = async () => {
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/songs/liked?user_id=${userId}`);
+        const json = await res.json();
+        if (json.status === "success") {
+          setLikedSongs(json.data);
+        }
+      } catch (err) {
+        console.error("Error fetching liked songs in sidebar:", err);
+      }
+    };
+    fetchLikedSongs();
+  }, [userId, refreshTrigger, likedSongIds]);
 
   const menuItems = [
-    { id: 'Home', label: 'Home', icon: Home },
-    { id: 'Favorite', label: 'Favorite', icon: Heart },
-    { id: 'Playlists', label: 'Playlists', icon: ListMusic },
-    { id: 'Browser', label: 'Browser', icon: Globe },
+    { id: 'Home', label: 'Home', icon: Home, path: '/home' },
+    { id: 'Favorite', label: 'Comparative Sandbox', icon: Heart, path: '/recommendation' },
+    { id: 'Playlists', label: 'My Favorites', icon: ListMusic, action: 'scroll-favorites' },
+    { id: 'Browser', label: 'Search Songs', icon: Globe, action: 'focus-search' },
   ];
 
   const bottomItems = [
-    { id: 'Premium', label: 'Permium', icon: Award },
+    { id: 'Premium', label: 'Premium', icon: Award },
     { id: 'Q&A', label: 'Q&A', icon: MessageSquare },
   ];
+
+  const handleItemClick = (item) => {
+    setActiveTab(item.id);
+    if (item.path) {
+      navigate(item.path);
+    } else if (item.action === 'scroll-favorites') {
+      const favoritesHeader = document.querySelector('h2');
+      if (favoritesHeader) {
+        favoritesHeader.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (item.action === 'focus-search') {
+      const searchInput = document.querySelector('input[type="text"]');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
   return (
     <aside 
@@ -62,7 +98,6 @@ const SideBarMenu = () => {
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => setIsExpanded(false)}
     >
-      {/* The main pill-shaped container */}
       <div className={`${styles.pillContainer} ${isExpanded ? styles.pillExpanded : styles.pillCollapsed}`}>
         {/* Main Menu */}
         <nav className={styles.menuGroup}>
@@ -73,10 +108,48 @@ const SideBarMenu = () => {
               icon={item.icon}
               active={activeTab === item.id}
               expanded={isExpanded}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleItemClick(item)}
             />
           ))}
         </nav>
+
+        {/* Real Liked Songs Library list (Similar to Spotify Library) */}
+        {isExpanded && likedSongs.length > 0 && (
+          <div className={styles.likedSongsWrapper}>
+            <h4 className={styles.sectionTitle}>Library ({likedSongs.length})</h4>
+            <div className={styles.likedTrackList}>
+              {likedSongs.map((track) => {
+                const isCurrent = currentSong && currentSong.track_id === track.track_id;
+                return (
+                  <div 
+                    key={track.track_id} 
+                    className={`${styles.likedTrackItem} ${isCurrent ? styles.activeTrack : ''}`}
+                    onClick={() => onPlaySong && onPlaySong(track, likedSongs)}
+                    title={track.track_name}
+                  >
+                    <Heart size={14} fill="#ef4444" style={{ color: '#ef4444', marginRight: '8px', flexShrink: 0 }} />
+                    <div className={styles.trackText}>
+                      <div className={styles.trackName}>{track.track_name}</div>
+                      <div className={styles.trackArtist}>{track.artists}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Collapsed view indicator when library has tracks */}
+        {!isExpanded && likedSongs.length > 0 && (
+          <div 
+            className={styles.collapsedLibraryIndicator}
+            onClick={() => setIsExpanded(true)}
+            title={`Liked Songs Library (${likedSongs.length})`}
+          >
+            <Heart size={18} fill="#ef4444" style={{ color: '#ef4444' }} />
+            <span className={styles.libraryBadge}>{likedSongs.length}</span>
+          </div>
+        )}
 
         {/* Bottom Menu */}
         <div className={styles.bottomGroup}>
@@ -87,7 +160,7 @@ const SideBarMenu = () => {
               icon={item.icon}
               active={activeTab === item.id}
               expanded={isExpanded}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleItemClick(item)}
             />
           ))}
         </div>

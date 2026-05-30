@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './Header.module.css';
-import { Search, Bell, Settings } from 'lucide-react';
+import { Search, Bell, Settings, X } from 'lucide-react';
 import logo from '../../assets/logo.png';
 
 const Header = ({ searchQuery, onSearchChange, username = "Guest", userId = "42" }) => {
@@ -21,6 +21,15 @@ const Header = ({ searchQuery, onSearchChange, username = "Guest", userId = "42"
             value={searchQuery}
             onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
           />
+          {searchQuery && (
+            <button 
+              className={styles.clearButton} 
+              onClick={() => onSearchChange && onSearchChange("")}
+              title="Clear search"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
