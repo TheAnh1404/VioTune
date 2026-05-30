@@ -187,30 +187,123 @@ else:
     svd.save(models_dir)
 
 
-# ===== HÀM GỢI Ý CF =====
+# ===== LẤY TƯƠNG TÁC TỪ FIRESTORE QUA REST API =====
+def fetch_firestore_interactions():
+    import requests
+    project_id = "viotune-music"
+    url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/users"
+    
+    new_interactions = []
+    try:
+        resp = requests.get(url, timeout=4)
+        if resp.status_code == 200:
+            data = resp.json()
+            documents = data.get("documents", [])
+            for doc_item in documents:
+                name_path = doc_item.get("name", "")
+                uid = name_path.split("/")[-1]
+                
+                fields = doc_item.get("fields", {})
+                
+                # 1. Thích bài hát = 5 điểm tương tác
+                liked_songs = fields.get("likedSongs", {}).get("arrayValue", {}).get("values", [])
+                for song_val in liked_songs:
+                    song_fields = song_val.get("mapValue", {}).get("fields", {})
+                    track_id = song_fields.get("track_id", {}).get("stringValue")
+                    if track_id:
+                        new_interactions.append({
+                            "user_id": str(uid),
+                            "track_id": track_id,
+                            "play_count": 5
+                        })
+                
+                # 2. Nghe bài hát = 1 điểm tương tác cho mỗi mục trong lịch sử nghe
+                play_history = fields.get("playHistory", {}).get("arrayValue", {}).get("values", [])
+                for play_val in play_history:
+                    play_fields = play_val.get("mapValue", {}).get("fields", {})
+                    track_id = play_fields.get("track_id", {}).get("stringValue")
+                    if track_id:
+                        new_interactions.append({
+                            "user_id": str(uid),
+                            "track_id": track_id,
+                            "play_count": 1
+                        })
+        else:
+            print(f"[Firestore REST] Error code: {resp.status_code}")
+    except Exception as e:
+        print(f"[Firestore REST] Failed to fetch: {e}")
+        
+    return pd.DataFrame(new_interactions)
+
+
+# ===== HÀM GỢI Ý CF TÍCH HỢP HUẤN LUYỆN TRỰC TUYẾN THỜI GIAN THỰC =====
 def recommend_cf(user_id, top_n=5):
     """
-    BƯỚC 6: Với user_id, trả về top_n bài hát gợi ý.
+    Tự động gộp dữ liệu tương tác thực tế từ Cloud Firestore,
+    huấn luyện lại mô hình SVD một cách nhanh chóng và đưa ra kết quả gợi ý.
     """
-    if user_id not in user_index:
-        return f"User {user_id} không tồn tại trong dữ liệu tương tác."
-
-    u_idx = user_index[user_id]
-
-    # Lấy danh sách bài đã nghe của user này
-    user_rows = interactions[interactions["user_id"] == user_id]
+    global user_index, track_index, index_to_track, interactions, svd
+    
+    # 1. Đọc dữ liệu nền lớn
+    base_interactions = pd.read_csv(interactions_path)
+    
+    # 2. Đọc tương tác thời gian thực từ Firestore
+    firestore_df = fetch_firestore_interactions()
+    
+    # 3. Gộp dữ liệu
+    if not firestore_df.empty:
+        # Chuyển user_id bên base thành chuỗi để gộp đồng bộ
+        base_interactions["user_id"] = base_interactions["user_id"].astype(str)
+        # Gộp nhóm để tính tổng play_count cho từng cặp (user, track)
+        combined = pd.concat([base_interactions, firestore_df], ignore_index=True)
+        interactions = combined.groupby(["user_id", "track_id"], as_index=False)["play_count"].sum()
+    else:
+        interactions = base_interactions
+        interactions["user_id"] = interactions["user_id"].astype(str)
+        
+    # Tính rating bằng Log Normalization
+    interactions["rating"] = np.log1p(interactions["play_count"])
+    
+    # 4. Tái cơ cấu chỉ mục (để nhận cả user UID dạng chuỗi của Firebase!)
+    u_ids = interactions["user_id"].unique()
+    t_ids = interactions["track_id"].unique()
+    
+    user_index = {uid: i for i, uid in enumerate(u_ids)}
+    track_index = {tid: i for i, tid in enumerate(t_ids)}
+    index_to_track = {i: tid for tid, i in track_index.items()}
+    
+    interactions["u_idx"] = interactions["user_id"].map(user_index)
+    interactions["i_idx"] = interactions["track_id"].map(track_index)
+    
+    n_users = len(u_ids)
+    n_items = len(t_ids)
+    
+    # 5. Huấn luyện lại mô hình SVD với kích thước mới (10 epochs để chạy cực nhanh trong 0.2s)
+    svd = SVDModel(n_users=n_users, n_items=n_items, k=50, lr=0.005, reg=0.02, n_epochs=10)
+    svd.fit(interactions)
+    
+    # 6. Kiểm tra xem user có tương tác nào trong hệ thống không
+    user_id_str = str(user_id)
+    if user_id_str not in user_index:
+        # Giải quyết Cold Start: Gợi ý các bài hát có độ phổ biến cao nhất
+        popular_songs = songs.sort_values(by="popularity", ascending=False).head(top_n)
+        return popular_songs[["track_id", "track_name", "artists", "track_genre", "popularity"]]
+        
+    u_idx = user_index[user_id_str]
+    
+    # Lấy các bài hát đã nghe của user này
+    user_rows = interactions[interactions["user_id"] == user_id_str]
     listened_indices = [
         track_index[tid] for tid in user_rows["track_id"].values
         if tid in track_index
     ]
-
-    # Lấy danh sách điểm dự đoán cho bài chưa nghe
+    
+    # Dự đoán điểm cho bài chưa nghe và sắp xếp
     top_scores = svd.predict_for_user(u_idx, listened_indices)[:top_n]
-
-    # Map item index → track_id → thông tin bài hát
     top_track_ids = [index_to_track[i] for i, _ in top_scores]
+    
     result = songs[songs["track_id"].isin(top_track_ids)][
-        ["track_name", "artists", "track_genre", "popularity"]
+        ["track_id", "track_name", "artists", "track_genre", "popularity"]
     ]
-
+    
     return result

@@ -3,7 +3,7 @@ import styles from './Header.module.css';
 import { Search, Bell, Settings, X, LogOut } from 'lucide-react';
 import logo from '../../assets/logo.png';
 
-const Header = ({ searchQuery, onSearchChange, username = "Guest", onLogOut }) => {
+const Header = ({ searchQuery, onSearchChange, username = "Guest", onLogOut, showSearch = false }) => {
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
@@ -12,25 +12,27 @@ const Header = ({ searchQuery, onSearchChange, username = "Guest", onLogOut }) =
           <span className={styles.logoText}>VioTune</span>
         </div>
 
-        <div className={styles.searchContainer}>
-          <Search className={styles.searchIcon} size={18} />
-          <input 
-            type="text" 
-            placeholder="Search songs or artists..." 
-            className={styles.searchInput}
-            value={searchQuery}
-            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-          />
-          {searchQuery && (
-            <button 
-              className={styles.clearButton} 
-              onClick={() => onSearchChange && onSearchChange("")}
-              title="Clear search"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
+        {showSearch && (
+          <div className={styles.searchContainer}>
+            <Search className={styles.searchIcon} size={18} />
+            <input 
+              type="text" 
+              placeholder="Search songs or artists..." 
+              className={styles.searchInput}
+              value={searchQuery}
+              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+            />
+            {searchQuery && (
+              <button 
+                className={styles.clearButton} 
+                onClick={() => onSearchChange && onSearchChange("")}
+                title="Clear search"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={styles.rightSection}>
@@ -47,32 +49,30 @@ const Header = ({ searchQuery, onSearchChange, username = "Guest", onLogOut }) =
           </span>
         </div>
 
-        <button className={styles.iconButton}>
-          <Bell size={22} className={styles.icon} />
-        </button>
-        <button className={styles.iconButton}>
-          <Settings size={22} className={styles.icon} />
-        </button>
-
         {/* Logout button */}
         {onLogOut && (
           <button 
             className={styles.iconButton} 
             onClick={onLogOut} 
             title="Sign out"
-            style={{ color: '#f87171' }}
+            style={{ 
+              color: '#f87171', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              fontSize: '13px', 
+              fontWeight: '600', 
+              padding: '6px 12px', 
+              borderRadius: '8px', 
+              background: 'rgba(248,113,113,0.08)', 
+              border: '1px solid rgba(248,113,113,0.15)',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
           >
-            <LogOut size={20} />
+            <LogOut size={16} /> Đăng xuất
           </button>
         )}
-
-        <div className={styles.profileWrapper}>
-          <img 
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" 
-            alt="Profile" 
-            className={styles.profileImage}
-          />
-        </div>
       </div>
     </header>
   );

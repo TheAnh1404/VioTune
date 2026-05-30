@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SideBarMenu from '../../components/SideBarMenu/SideBarMenu';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
@@ -19,21 +20,33 @@ import TrendingNow from '../../components/TrendingNow/TrendingNow';
 import RecentlySeen from '../../components/RecentlySeen/RecentlySeen';
 import MusicPlayer from '../../components/MusicPlayer/MusicPlayer';
 import { useAuth } from '../../context/AuthContext';
+import { usePlayback } from '../../context/PlaybackContext';
 
 const HomePage = () => {
+  const navigate = useNavigate();
+  
   // ── Firebase Auth context ────────────────────────────────────────────────────
-  const { user, logOut, likeSong, unlikeSong, getLikedSongs, recordPlay } = useAuth();
+  const { user, logOut, likeSong, unlikeSong, getLikedSongs } = useAuth();
   const userId = user?.uid || 'anonymous';
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [trendingSongs, setTrendingSongs] = useState([]);
-  const [currentSong, setCurrentSong] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  // ── Playback Context (Global State) ───────────────────────────────────────────
+  const {
+    currentSong, setCurrentSong,
+    isPlaying,
+    queue, setQueue,
+    currentIndex, setCurrentIndex,
+    duration, currentTime,
+    volume, setVolume,
+    repeatMode, isShuffle,
+    previewUrl, previewLoading,
+    showQueue, setShowQueue,
+    playSong, togglePlay, seek,
+    nextSong, prevSong, toggleRepeat, toggleShuffle, clearQueue
+  } = usePlayback();
 
-  // Interactive States
+  // Local Interactive States (Non-playback)
+  const [trendingSongs, setTrendingSongs] = useState([]);
   const [likedSongs, setLikedSongs] = useState([]);
   const [likedSongIds, setLikedSongIds] = useState(new Set());
   const [refreshLikes, setRefreshLikes] = useState(0);
@@ -43,43 +56,6 @@ const HomePage = () => {
   // Curated playlist states
   const [playlistSongs, setPlaylistSongs] = useState([]);
   const [playlistTitle, setPlaylistTitle] = useState("");
-
-  // Playback Real States
-  const audioRef = useRef(null);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [queue, setQueue] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(-1);
-  const [repeatMode, setRepeatMode] = useState('off'); // 'off' | 'all' | 'one'
-  const [isShuffle, setIsShuffle] = useState(false);
-  const [showQueue, setShowQueue] = useState(false);
-  const [volume, setVolume] = useState(0.8);
-  const [previewUrl, setPreviewUrl] = useState(null);  // Real Deezer preview URL
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const previewCache = useRef({});  // { 'trackId': 'https://...' | null }
-
-  // Fetch real Deezer 30s preview via our FastAPI backend proxy
-  const fetchDeezerPreview = async (song) => {
-    const cacheKey = song.track_id;
-    if (previewCache.current[cacheKey] !== undefined) {
-      return previewCache.current[cacheKey]; // return cached (including null)
-    }
-    try {
-      setPreviewLoading(true);
-      const url = `http://127.0.0.1:8000/songs/preview?track_name=${encodeURIComponent(song.track_name)}&artist=${encodeURIComponent(song.artists)}`;
-      const res = await fetch(url);
-      const json = await res.json();
-      const preview = json?.data?.preview_url || null;
-      previewCache.current[cacheKey] = preview;
-      return preview;
-    } catch (err) {
-      console.warn('Preview fetch failed:', err);
-      previewCache.current[cacheKey] = null;
-      return null;
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
 
   // ── Load liked songs from Firestore on mount ─────────────────────────────────
   useEffect(() => {
@@ -119,8 +95,8 @@ const HomePage = () => {
         const json = await res.json();
         if (json.status === "success") {
           setTrendingSongs(json.data);
-          // Set first song as default (but not playing)
-          if (json.data.length > 0) {
+          // Set first song as default queue if empty
+          if (json.data.length > 0 && !currentSong) {
             setCurrentSong(json.data[0]);
             setQueue(json.data);
             setCurrentIndex(0);
@@ -131,104 +107,12 @@ const HomePage = () => {
       }
     };
     fetchTrending();
-  }, []);
-
-  // Fetch search results whenever searchQuery changes
-  useEffect(() => {
-    const fetchSearch = async () => {
-      if (!searchQuery.trim()) {
-        setSearchResults([]);
-        setIsSearching(false);
-        return;
-      }
-      // Overridden by active search
-      setPlaylistSongs([]);
-      setPlaylistTitle("");
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/songs/search?q=${encodeURIComponent(searchQuery)}&limit=10`);
-        const json = await res.json();
-        if (json.status === "success") {
-          setSearchResults(json.data);
-        }
-      } catch (err) {
-        console.error("Lỗi search songs:", err);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-    
-    // Simple debounce
-    setIsSearching(true);
-    const delayDebounce = setTimeout(() => {
-      fetchSearch();
-    }, 300);
-    
-    return () => clearTimeout(delayDebounce);
-  }, [searchQuery]);
-
-  // Auto-scroll to search results when they arrive
-  useEffect(() => {
-    if (searchQuery.trim() && searchResults.length > 0) {
-      const el = document.getElementById('trending-now-section');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  }, [searchResults, searchQuery]); // eslint-disable-next-line react-hooks/exhaustive-deps
-
-  // Handle Playback Audio object properties using real Deezer previews
-  useEffect(() => {
-    if (!audioRef.current) return;
-
-    if (currentSong && currentSong.track_id) {
-      const applyPlayback = async () => {
-        const deezerUrl = await fetchDeezerPreview(currentSong);
-        setPreviewUrl(deezerUrl);
-
-        if (!deezerUrl) {
-          console.warn(`No Deezer preview found for: ${currentSong.track_name} — ${currentSong.artists}`);
-          audioRef.current.pause();
-          return;
-        }
-
-        // Load new source only if changed
-        if (audioRef.current.src !== deezerUrl) {
-          audioRef.current.src = deezerUrl;
-          audioRef.current.load();
-        }
-
-        audioRef.current.volume = volume;
-
-        if (isPlaying) {
-          audioRef.current.play().catch(err => {
-            console.warn('Playback blocked by browser policy:', err);
-          });
-        } else {
-          audioRef.current.pause();
-        }
-      };
-
-      applyPlayback();
-    } else {
-      audioRef.current.pause();
-    }
-  }, [currentSong, isPlaying]); // eslint-disable-next-line react-hooks/exhaustive-deps
-
-  // Sync volume change to Audio object
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
+  }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const handlePlaySong = (song, songList = []) => {
     let targetQueue = songList;
-    
-    // Fallback: If no list passed, search in active state lists
     if (!targetQueue || targetQueue.length === 0) {
-      if (searchResults.some(s => s.track_id === song.track_id)) {
-        targetQueue = searchResults;
-      } else if (playlistSongs.some(s => s.track_id === song.track_id)) {
+      if (playlistSongs.some(s => s.track_id === song.track_id)) {
         targetQueue = playlistSongs;
       } else if (trendingSongs.some(s => s.track_id === song.track_id)) {
         targetQueue = trendingSongs;
@@ -237,125 +121,16 @@ const HomePage = () => {
       }
     }
 
-    setQueue(targetQueue);
-    const idx = targetQueue.findIndex(s => s.track_id === song.track_id);
-    setCurrentIndex(idx >= 0 ? idx : 0);
-
-    if (currentSong && currentSong.track_id === song.track_id) {
-      setIsPlaying(!isPlaying);
-    } else {
-      setCurrentSong(song);
-      setIsPlaying(true);
-
-      // Record play in Firestore + update local recent list
-      if (user) {
-        recordPlay(song).catch(err => console.warn('recordPlay failed:', err));
-      }
-      setRecentSongs(prev => {
-        const filtered = prev.filter(s => s.track_id !== song.track_id);
-        return [song, ...filtered].slice(0, 5);
-      });
-    }
-  };
-
-  const handleTogglePlay = () => {
-    if (currentSong) {
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleSeek = (time) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-      setCurrentTime(time);
-    }
-  };
-
-  const handleVolumeChange = (newVolume) => {
-    setVolume(newVolume);
-  };
-
-  const handleNextSong = () => {
-    if (queue.length === 0) return;
-
-    let nextIdx;
-    if (isShuffle) {
-      nextIdx = Math.floor(Math.random() * queue.length);
-    } else {
-      nextIdx = currentIndex + 1;
-      if (nextIdx >= queue.length) {
-        if (repeatMode === 'all') {
-          nextIdx = 0;
-        } else {
-          setIsPlaying(false);
-          return;
-        }
-      }
-    }
-
-    if (nextIdx >= 0 && nextIdx < queue.length) {
-      setCurrentIndex(nextIdx);
-      setCurrentSong(queue[nextIdx]);
-      setIsPlaying(true);
-    }
-  };
-
-  const handlePrevSong = () => {
-    if (queue.length === 0) return;
-
-    let prevIdx;
-    if (isShuffle) {
-      prevIdx = Math.floor(Math.random() * queue.length);
-    } else {
-      prevIdx = currentIndex - 1;
-      if (prevIdx < 0) {
-        if (repeatMode === 'all') {
-          prevIdx = queue.length - 1;
-        } else {
-          if (audioRef.current) {
-            audioRef.current.currentTime = 0;
-            setCurrentTime(0);
-          }
-          return;
-        }
-      }
-    }
-
-    if (prevIdx >= 0 && prevIdx < queue.length) {
-      setCurrentIndex(prevIdx);
-      setCurrentSong(queue[prevIdx]);
-      setIsPlaying(true);
-    }
-  };
-
-  const handleToggleRepeat = () => {
-    setRepeatMode(prev => {
-      if (prev === 'off') return 'all';
-      if (prev === 'all') return 'one';
-      return 'off';
+    playSong(song, targetQueue);
+    
+    // Add to local recent history state
+    setRecentSongs(prev => {
+      const filtered = prev.filter(s => s.track_id !== song.track_id);
+      return [song, ...filtered].slice(0, 5);
     });
-  };
 
-  const handleToggleShuffle = () => {
-    setIsShuffle(prev => !prev);
-  };
-
-  const handleClearQueue = () => {
-    setQueue([]);
-    setCurrentIndex(-1);
-    setCurrentSong(null);
-    setIsPlaying(false);
-  };
-
-  const handleAudioEnded = () => {
-    if (repeatMode === 'one') {
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(err => console.error("Error playing audio on repeat one:", err));
-      }
-    } else {
-      handleNextSong();
-    }
+    // Navigate to dedicated Player page for YouTube Music experience!
+    navigate('/player');
   };
 
   // ── Like / Unlike using Firestore ───────────────────────────────────────────
@@ -363,7 +138,6 @@ const HomePage = () => {
     if (!user) return;
     const isLiked = likedSongIds.has(song.track_id);
     try {
-      // Optimistic update
       setLikedSongIds(prev => {
         const next = new Set(prev);
         if (isLiked) next.delete(song.track_id);
@@ -379,7 +153,7 @@ const HomePage = () => {
       setRefreshLikes(prev => prev + 1);
     } catch (err) {
       console.error('Like/unlike failed:', err);
-      // Revert optimistic update on error
+      // Revert on error
       setLikedSongIds(prev => {
         const next = new Set(prev);
         if (isLiked) next.add(song.track_id);
@@ -390,7 +164,6 @@ const HomePage = () => {
   };
 
   const handleSelectPlaylist = async (playlistName, genreName) => {
-    setSearchQuery(""); // Clear search to show playlist
     try {
       const res = await fetch(`http://127.0.0.1:8000/playlists/${genreName}/songs?limit=15`);
       const json = await res.json();
@@ -400,7 +173,7 @@ const HomePage = () => {
         setQueue(json.data);
         setCurrentIndex(0);
         
-        // Scroll smoothly to Trending Now / Playlist track row
+        // Scroll smoothly to Playlist section
         const el = document.querySelector('h2:nth-of-type(3)') || document.querySelector('section:nth-of-type(4)');
         if (el) {
           el.scrollIntoView({ behavior: 'smooth' });
@@ -424,11 +197,9 @@ const HomePage = () => {
   return (
     <div className={styles.homeContainer}>
       <Header 
-        searchQuery={searchQuery} 
-        onSearchChange={setSearchQuery} 
         username={username} 
-        userId={userId}
         onLogOut={handleLogOut}
+        showSearch={false} // Header does not show search box on home page!
       />
       <div className={styles.contentWrapper}>
         <SideBarMenu 
@@ -476,7 +247,7 @@ const HomePage = () => {
                 {/* Dynamic Artists Followed */}
                 <ArtistsFollowed 
                   artists={popularArtists}
-                  onArtistClick={(artist) => setSearchQuery(artist)}
+                  onArtistClick={() => navigate('/search')}
                 />
                 
                 <HeroSeries 
@@ -493,29 +264,29 @@ const HomePage = () => {
 
                 {/* Dynamic Albums */}
                 <RecentAlbums 
-                  onAlbumClick={(artist) => setSearchQuery(artist)}
+                  onAlbumClick={() => navigate('/search')}
                 />
                 
                 {/* Interactive Genre Selector */}
                 <InterestGenres 
-                  onSelectGenre={(genre) => setSearchQuery(genre)}
+                  onSelectGenre={() => navigate('/search')}
                 />
                 
                 {/* Dynamic Suggestions */}
                 <MoreArtists 
                   artists={popularArtists}
-                  onArtistClick={(artist) => setSearchQuery(artist)}
+                  onArtistClick={() => navigate('/search')}
                 />
 
                 {/* 3. Search and Trending Section */}
                 <TrendingNow 
-                  songs={searchQuery ? searchResults : (playlistSongs.length > 0 ? playlistSongs : trendingSongs)} 
-                  title={searchQuery ? `Search Results for "${searchQuery}"` : (playlistTitle ? playlistTitle : "Trending Now")} 
+                  songs={playlistSongs.length > 0 ? playlistSongs : trendingSongs} 
+                  title={playlistTitle ? playlistTitle : "Trending Now"} 
                   onPlaySong={handlePlaySong} 
                   currentSong={currentSong} 
                   likedSongIds={likedSongIds}
                   onLikeSong={handleLikeSong}
-                  isLoading={isSearching}
+                  isLoading={false}
                 />
 
                 {/* Dynamic Playback History */}
@@ -532,7 +303,7 @@ const HomePage = () => {
                 currentIndex={currentIndex}
                 currentSong={currentSong}
                 onPlaySong={handlePlaySong}
-                onClearQueue={handleClearQueue}
+                onClearQueue={clearQueue}
                 onClose={() => setShowQueue(false)}
               />
             </div>
@@ -543,28 +314,23 @@ const HomePage = () => {
       <MusicPlayer 
         currentSong={currentSong} 
         isPlaying={isPlaying} 
-        onTogglePlay={handleTogglePlay} 
+        onTogglePlay={togglePlay} 
         duration={duration}
         currentTime={currentTime}
-        onSeek={handleSeek}
-        onNext={handleNextSong}
-        onPrev={handlePrevSong}
+        onSeek={seek}
+        onNext={nextSong}
+        onPrev={prevSong}
         repeatMode={repeatMode}
         isShuffle={isShuffle}
-        onToggleRepeat={handleToggleRepeat}
-        onToggleShuffle={handleToggleShuffle}
+        onToggleRepeat={toggleRepeat}
+        onToggleShuffle={toggleShuffle}
         onToggleQueue={() => setShowQueue(prev => !prev)}
         showQueue={showQueue}
         volume={volume}
-        onVolumeChange={handleVolumeChange}
+        onVolumeChange={setVolume}
         previewLoading={previewLoading}
         previewUrl={previewUrl}
-      />
-      <audio 
-        ref={audioRef}
-        onDurationChange={(e) => setDuration(e.target.duration)}
-        onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
-        onEnded={handleAudioEnded}
+        onMaximize={() => navigate('/player')} // Support click maximize to YTM page!
       />
     </div>
   );

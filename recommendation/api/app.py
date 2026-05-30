@@ -45,7 +45,7 @@ def home():
     return {"status": "success", "message": "Recommendation API is running 🚀"}
 
 @app.get("/recommend")
-def recommend(user_id: int, song_id: str, top_n: int = Query(5, ge=1, le=50)):
+def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50)):
     try:
         result = hybrid_recommend(user_id=user_id, song_id=song_id, top_n=top_n)
         if isinstance(result, str): # Error message from inner function
@@ -71,7 +71,7 @@ def recommend_content(song_id: str, top_n: int = Query(5, ge=1, le=50)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/recommend/cf")
-def recommend_collaborative(user_id: int, top_n: int = Query(5, ge=1, le=50)):
+def recommend_collaborative(user_id: str, top_n: int = Query(5, ge=1, le=50)):
     try:
         result_df = recommend_cf(user_id, top_n=top_n)
         if isinstance(result_df, str):
@@ -116,7 +116,7 @@ def get_daily_pick(limit: int = Query(5, ge=1, le=20)):
     return {"status": "success", "data": picks[['track_id', 'track_name', 'artists', 'track_genre', 'popularity']].to_dict(orient="records")}
 
 @app.get("/songs/liked")
-def get_liked_songs(user_id: int):
+def get_liked_songs(user_id: str):
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     
@@ -189,7 +189,7 @@ def get_song(track_id: str):
     return {"status": "success", "data": song.iloc[0].to_dict()}
 
 @app.post("/songs/{track_id}/like")
-def toggle_like_song(track_id: str, user_id: int):
+def toggle_like_song(track_id: str, user_id: str):
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     

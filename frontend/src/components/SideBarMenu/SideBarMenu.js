@@ -49,7 +49,7 @@ const SideBarMenu = ({ userId = "42", likedSongs = [], likedSongIds = new Set(),
     { id: 'Home', label: 'Home', icon: Home, path: '/home' },
     { id: 'Favorite', label: 'Comparative Sandbox', icon: Heart, path: '/recommendation' },
     { id: 'Playlists', label: 'My Favorites', icon: ListMusic, action: 'scroll-favorites' },
-    { id: 'Browser', label: 'Search Songs', icon: Globe, action: 'focus-search' },
+    { id: 'Browser', label: 'Search Songs', icon: Globe, path: '/search' },
   ];
 
   const bottomItems = [

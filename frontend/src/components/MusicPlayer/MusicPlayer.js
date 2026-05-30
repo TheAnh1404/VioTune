@@ -53,7 +53,8 @@ const MusicPlayer = ({
   volume = 0.8,
   onVolumeChange,
   previewLoading = false,
-  previewUrl = null
+  previewUrl = null,
+  onMaximize
 }) => {
   const songTitle = currentSong ? currentSong.track_name : "No song playing";
   const songArtist = currentSong ? currentSong.artists : "Select a song to start listening";
@@ -98,7 +99,7 @@ const MusicPlayer = ({
   return (
     <div className={styles.playerWrapper}>
       {/* Cột trái: Thông tin bài hát */}
-      <div className={styles.songInfo}>
+      <div className={styles.songInfo} onClick={onMaximize} style={{ cursor: 'pointer' }} title="Mở trình phát lớn (YouTube Music)">
         <img 
           src={coverUrl} 
           alt="Album Art" 
