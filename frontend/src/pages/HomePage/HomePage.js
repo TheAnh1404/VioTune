@@ -19,6 +19,7 @@ import MoreArtists from '../../components/MoreArtists/MoreArtists';
 import TrendingNow from '../../components/TrendingNow/TrendingNow';
 import RecentlySeen from '../../components/RecentlySeen/RecentlySeen';
 import MusicPlayer from '../../components/MusicPlayer/MusicPlayer';
+import AIRecommendationStation from '../../components/AIRecommendationStation/AIRecommendationStation';
 import { useAuth } from '../../context/AuthContext';
 import { usePlayback } from '../../context/PlaybackContext';
 
@@ -179,6 +180,16 @@ const HomePage = () => {
             <div className={styles.leftSection}>
               <div className={styles.placeholderLeft}>
                 <FeatureCards />
+                
+                {/* AI Recommendation Station Control Dashboard */}
+                <AIRecommendationStation 
+                  userId={userId}
+                  currentSong={currentSong}
+                  onPlaySong={handlePlaySong}
+                  likedSongIds={likedSongIds}
+                  onLikeSong={handleLikeSong}
+                  likedTrigger={likedSongs?.length || 0}
+                />
                 
                 {/* 1. Personalized CF Recommendations Section */}
                 <PersonalPlaylist 

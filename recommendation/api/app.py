@@ -20,10 +20,14 @@ load_dotenv(os.path.join(current_dir, ".env"))
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
+from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import requests
 import urllib.parse
+import hashlib
+import uuid
+import datetime
 
 from src.hybrid import hybrid_recommend
 from src.content_based import recommend as content_recommend
@@ -31,9 +35,106 @@ from src.collaborative import recommend_cf
 
 app = FastAPI(title="VioTune API", description="Music Recommendation API", version="1.0.0")
 
+# Setup environment database paths
+current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+db_path = os.path.join(current_dir, "data/viotune.db")
+
+# Salting and Hashing password helpers using standard hashlib
+def hash_password(password: str, salt: str = None) -> str:
+    if not salt:
+        salt = uuid.uuid4().hex
+    hash_val = hashlib.sha256((password + salt).encode('utf-8')).hexdigest()
+    return f"{salt}${hash_val}"
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    try:
+        salt, hash_val = hashed_password.split("$")
+        return hash_password(password, salt) == hashed_password
+    except Exception:
+        return False
+
+# Pydantic Auth Models
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    displayName: str
+
+class SigninRequest(BaseModel):
+    email: str
+    password: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+
+# Table Initializer function
+def init_db():
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    # Users table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            uid TEXT PRIMARY KEY,
+            email TEXT UNIQUE,
+            password_hash TEXT,
+            display_name TEXT,
+            created_at TEXT
+        )
+    """)
+    # Liked songs table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS liked_songs (
+            user_id TEXT,
+            track_id TEXT,
+            liked_at TEXT,
+            PRIMARY KEY (user_id, track_id)
+        )
+    """)
+    # Play history table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS play_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            track_id TEXT,
+            played_at TEXT
+        )
+    """)
+    # Deezer cache table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS deezer_cache (
+            cache_key TEXT PRIMARY KEY,
+            preview_url TEXT,
+            cover_url TEXT,
+            deezer_title TEXT,
+            deezer_artist TEXT,
+            found INTEGER
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+# Initialize SQLite tables
+try:
+    init_db()
+    print("Database tables initialized successfully.")
+except Exception as e:
+    print(f"Error initializing DB tables: {e}")
+
+
 # CORS setup with environment origin restriction
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "*")
 allowed_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+
+# If wildcard is set or empty, expand to common dev server ports to avoid credentials-CORS exceptions
+if "*" in allowed_origins or not allowed_origins:
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:5000",
+        "http://127.0.0.1:5000"
+    ]
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,6 +143,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Load metadata from SQLite database
 current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -79,6 +181,189 @@ _preview_cache: dict = {}
 @app.get("/")
 def home():
     return {"status": "success", "message": "Recommendation API is running 🚀"}
+
+# --- AUTH ENPOINTS ---
+@app.post("/api/auth/signup")
+def signup(req: SignupRequest):
+    import sqlite3
+    import datetime
+    import uuid
+    
+    email = req.email.strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required.")
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM users WHERE email = ?", (email,))
+    if cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=400, detail="This email is already registered.")
+    
+    uid = str(uuid.uuid4())
+    password_hash = hash_password(req.password)
+    created_at = datetime.datetime.now().isoformat()
+    
+    cursor.execute(
+        "INSERT INTO users (uid, email, password_hash, display_name, created_at) VALUES (?, ?, ?, ?, ?)",
+        (uid, email, password_hash, req.displayName.strip(), created_at)
+    )
+    conn.commit()
+    conn.close()
+    
+    return {
+        "status": "success",
+        "user": {
+            "uid": uid,
+            "email": email,
+            "displayName": req.displayName.strip()
+        }
+    }
+
+@app.post("/api/auth/signin")
+def signin(req: SigninRequest):
+    import sqlite3
+    
+    email = req.email.strip().lower()
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    user_row = cursor.fetchone()
+    conn.close()
+    
+    if not user_row:
+        raise HTTPException(status_code=400, detail="No account found with this email.")
+        
+    if not verify_password(req.password, user_row["password_hash"]):
+        raise HTTPException(status_code=400, detail="Incorrect password.")
+        
+    return {
+        "status": "success",
+        "user": {
+            "uid": user_row["uid"],
+            "email": user_row["email"],
+            "displayName": user_row["display_name"]
+        }
+    }
+
+@app.post("/api/auth/reset-password")
+def reset_password_route(req: ResetPasswordRequest):
+    import sqlite3
+    
+    email = req.email.strip().lower()
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM users WHERE email = ?", (email,))
+    user_exists = cursor.fetchone()
+    conn.close()
+    
+    if not user_exists:
+        raise HTTPException(status_code=404, detail="No account found with this email.")
+        
+    return {
+        "status": "success",
+        "message": "Password reset email simulated successfully."
+    }
+
+# --- MUSIC DATA LOGGING & PROFILE ANALYTICS ---
+@app.post("/songs/{track_id}/play")
+def record_song_play(track_id: str, user_id: str):
+    if songs_df.empty:
+        raise HTTPException(status_code=500, detail="Dataset not loaded")
+    
+    # Check if song exists
+    song = songs_df[songs_df['track_id'] == track_id]
+    if song.empty:
+        raise HTTPException(status_code=404, detail="Song not found")
+        
+    try:
+        import sqlite3
+        import datetime
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        played_at = datetime.datetime.now().isoformat()
+        cursor.execute("INSERT INTO play_history (user_id, track_id, played_at) VALUES (?, ?, ?)", (user_id, track_id, played_at))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error recording play history: {e}")
+        
+    return {"status": "success", "message": "Song play recorded"}
+
+@app.get("/api/users/{user_id}/taste-profile")
+def get_user_taste_profile(user_id: str):
+    if songs_df.empty:
+        raise HTTPException(status_code=500, detail="Dataset not loaded")
+        
+    # Get liked songs
+    liked_ids = set()
+    try:
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT track_id FROM liked_songs WHERE user_id = ?", (user_id,))
+        for row in cursor.fetchall():
+            liked_ids.add(row[0])
+        conn.close()
+    except Exception as e:
+        print(f"Error fetching liked songs for profile: {e}")
+        
+    # Also in-memory
+    liked_ids.update(user_likes.get(user_id, set()))
+    
+    features_list = [
+        "danceability",
+        "energy",
+        "acousticness",
+        "instrumentalness",
+        "liveness",
+        "valence"
+    ]
+    
+    if not liked_ids:
+        # Return default averages if no liked songs
+        return {
+            "status": "success",
+            "data": {
+                "danceability": 0.5,
+                "energy": 0.5,
+                "acousticness": 0.5,
+                "instrumentalness": 0.2,
+                "liveness": 0.2,
+                "valence": 0.5,
+                "tempo": 120.0,
+                "song_count": 0,
+                "favorite_genre": "No liked songs yet"
+            }
+        }
+        
+    matched_songs = songs_df[songs_df['track_id'].isin(liked_ids)]
+    
+    # Calculate means
+    means = {}
+    for f in features_list:
+        if f in matched_songs.columns:
+            means[f] = float(matched_songs[f].mean())
+        else:
+            means[f] = 0.5
+            
+    if "tempo" in matched_songs.columns:
+        means["tempo"] = float(matched_songs["tempo"].mean())
+    else:
+        means["tempo"] = 120.0
+        
+    means["song_count"] = len(matched_songs)
+    
+    # Find top favorite genre
+    if "track_genre" in matched_songs.columns and not matched_songs.empty:
+        top_genre = matched_songs["track_genre"].value_counts().index[0]
+        means["favorite_genre"] = str(top_genre)
+    else:
+        means["favorite_genre"] = "Mixed"
+        
+    return {"status": "success", "data": means}
+
 
 def retrain_model_task():
     """
@@ -147,9 +432,9 @@ def trigger_retrain(background_tasks: BackgroundTasks):
     return {"status": "success", "message": "SVD model retraining triggered in background."}
 
 @app.get("/recommend")
-def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50)):
+def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), alpha: float = Query(0.5, ge=0.0, le=1.0)):
     try:
-        result = hybrid_recommend(user_id=user_id, song_id=song_id, top_n=top_n)
+        result = hybrid_recommend(user_id=user_id, song_id=song_id, top_n=top_n, alpha=alpha)
         if isinstance(result, str): # Error message from inner function
             raise HTTPException(status_code=404, detail=result)
         return {"status": "success", "data": result}
@@ -157,6 +442,7 @@ def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/recommend/content")
 def recommend_content(song_id: str, top_n: int = Query(5, ge=1, le=50)):
@@ -254,12 +540,28 @@ def get_liked_songs(user_id: str):
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     
-    liked_ids = list(user_likes.get(user_id, set()))
+    # Query from local SQLite liked_songs
+    liked_ids = set()
+    try:
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT track_id FROM liked_songs WHERE user_id = ?", (user_id,))
+        for row in cursor.fetchall():
+            liked_ids.add(row[0])
+        conn.close()
+    except Exception as e:
+        print(f"Error reading liked songs from DB: {e}")
+        
+    # Merge with in-memory backup
+    liked_ids.update(user_likes.get(user_id, set()))
+    
     if not liked_ids:
         return {"status": "success", "data": []}
     
     liked_songs = songs_df[songs_df['track_id'].isin(liked_ids)]
     return {"status": "success", "data": liked_songs[['track_id', 'track_name', 'artists', 'track_genre', 'popularity']].to_dict(orient="records")}
+
 
 @app.get("/songs/preview")
 def get_song_preview_route(track_name: str, artist: str):
@@ -409,14 +711,33 @@ def toggle_like_song(track_id: str, user_id: str):
     if user_id not in user_likes:
         user_likes[user_id] = set()
     
-    if track_id in user_likes[user_id]:
-        user_likes[user_id].remove(track_id)
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Check if already liked
+    cursor.execute("SELECT 1 FROM liked_songs WHERE user_id = ? AND track_id = ?", (user_id, track_id))
+    row = cursor.fetchone()
+    
+    if row:
+        # Unlike
+        cursor.execute("DELETE FROM liked_songs WHERE user_id = ? AND track_id = ?", (user_id, track_id))
         liked = False
+        if track_id in user_likes[user_id]:
+            user_likes[user_id].remove(track_id)
     else:
-        user_likes[user_id].add(track_id)
+        # Like
+        import datetime
+        liked_at = datetime.datetime.now().isoformat()
+        cursor.execute("INSERT INTO liked_songs (user_id, track_id, liked_at) VALUES (?, ?, ?)", (user_id, track_id, liked_at))
         liked = True
+        user_likes[user_id].add(track_id)
+        
+    conn.commit()
+    conn.close()
     
     return {"status": "success", "liked": liked, "message": "Song liked" if liked else "Song unliked"}
+
 
 @app.get("/genres")
 def get_genres():

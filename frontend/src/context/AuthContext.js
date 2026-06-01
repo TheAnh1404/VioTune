@@ -1,23 +1,9 @@
+// ─── Tái Cấu Trúc AuthContext cho VioTune FastAPI Backend ────────────────────────
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-  sendPasswordResetEmail
-} from 'firebase/auth';
-import {
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  arrayUnion,
-  serverTimestamp
-} from 'firebase/firestore';
-import { auth, db } from '../firebase';
 
 const AuthContext = createContext(null);
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
@@ -26,65 +12,104 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);          // Firebase user object
-  const [loading, setLoading] = useState(true);    // initial auth check
+  const [user, setUser] = useState(null);          // User object { uid, email, displayName }
+  const [loading, setLoading] = useState(true);    // Initial auth check loading status
   const [likedSongsList, setLikedSongsList] = useState([]);
   const [likedSongIds, setLikedSongIds] = useState(new Set());
 
-  // ── Listen to Firebase auth state ──────────────────────────────────────────
+  // ── Khôi phục trạng thái đăng nhập từ localStorage khi mount ──────────────────
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
+    const restoreSession = async () => {
+      const saved = localStorage.getItem('viotune_user');
+      if (saved) {
         try {
-          const userRef = doc(db, 'users', firebaseUser.uid);
-          const snap = await getDoc(userRef);
-          if (snap.exists()) {
-            const liked = snap.data().likedSongs || [];
-            setLikedSongsList(liked);
-            setLikedSongIds(new Set(liked.map(s => s.track_id)));
+          const parsedUser = JSON.parse(saved);
+          setUser(parsedUser);
+          
+          // Lấy danh sách bài hát yêu thích từ SQLite backend
+          const res = await fetch(`${API_URL}/songs/liked?user_id=${parsedUser.uid}`);
+          const json = await res.json();
+          if (json.status === "success") {
+            setLikedSongsList(json.data);
+            setLikedSongIds(new Set(json.data.map(s => s.track_id)));
           }
         } catch (err) {
-          console.warn("Failed to fetch liked songs on login:", err);
+          console.warn("Failed to restore local session:", err);
+          localStorage.removeItem('viotune_user');
         }
-      } else {
-        setLikedSongsList([]);
-        setLikedSongIds(new Set());
       }
       setLoading(false);
-    });
-    return unsub;
+    };
+    restoreSession();
   }, []);
 
-  // ── Sign Up ─────────────────────────────────────────────────────────────────
+  // ── Đăng Ký (Sign Up) ─────────────────────────────────────────────────────────
   const signUp = async (email, password, displayName) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(cred.user, { displayName });
-
-    // Create user document in Firestore
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      uid: cred.user.uid,
-      displayName,
-      email,
-      createdAt: serverTimestamp(),
-      likedSongs: [],
-      playHistory: [],
-      preferences: { genres: [] }
+    const response = await fetch(`${API_URL}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, displayName })
     });
-
-    return cred.user;
+    
+    const json = await response.json();
+    if (!response.ok) {
+      throw new Error(json.detail || 'Failed to sign up.');
+    }
+    
+    const newUser = json.user;
+    localStorage.setItem('viotune_user', JSON.stringify(newUser));
+    setUser(newUser);
+    setLikedSongsList([]);
+    setLikedSongIds(new Set());
+    return newUser;
   };
 
-  // ── Sign In ─────────────────────────────────────────────────────────────────
+  // ── Đăng Nhập (Sign In) ───────────────────────────────────────────────────────
   const signIn = async (email, password) => {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    return cred.user;
+    const response = await fetch(`${API_URL}/api/auth/signin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const json = await response.json();
+    if (!response.ok) {
+      // Create Firebase-like auth error structure for perfect backward compatibility
+      const err = new Error(json.detail || 'Login failed.');
+      err.code = json.detail === 'No account found with this email.' 
+        ? 'auth/user-not-found' 
+        : (json.detail === 'Incorrect password.' ? 'auth/wrong-password' : 'auth/invalid-credential');
+      throw err;
+    }
+    
+    const loggedUser = json.user;
+    localStorage.setItem('viotune_user', JSON.stringify(loggedUser));
+    setUser(loggedUser);
+    
+    // Tải danh sách yêu thích
+    try {
+      const likedRes = await fetch(`${API_URL}/songs/liked?user_id=${loggedUser.uid}`);
+      const likedJson = await likedRes.json();
+      if (likedJson.status === "success") {
+        setLikedSongsList(likedJson.data);
+        setLikedSongIds(new Set(likedJson.data.map(s => s.track_id)));
+      }
+    } catch (likedErr) {
+      console.warn("Failed to fetch liked list after login:", likedErr);
+    }
+    
+    return loggedUser;
   };
 
-  // ── Sign Out ────────────────────────────────────────────────────────────────
-  const logOut = () => signOut(auth);
+  // ── Đăng Xuất (Sign Out) ─────────────────────────────────────────────────────
+  const logOut = async () => {
+    localStorage.removeItem('viotune_user');
+    setUser(null);
+    setLikedSongsList([]);
+    setLikedSongIds(new Set());
+  };
 
-  // ── Like / Unlike a Song ────────────────────────────────────────────────────
+  // ── Thích Bài Hát (Like Song) ─────────────────────────────────────────────────
   const likeSong = async (track) => {
     if (!user) return;
     
@@ -101,13 +126,16 @@ export const AuthProvider = ({ children }) => {
     setLikedSongIds(prev => new Set([...prev, track.track_id]));
 
     try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        likedSongs: arrayUnion(newTrack)
+      const res = await fetch(`${API_URL}/songs/${track.track_id}/like?user_id=${user.uid}`, {
+        method: 'POST'
       });
+      const json = await res.json();
+      if (json.status !== "success") {
+        throw new Error(json.message || "Failed to like song.");
+      }
     } catch (err) {
-      console.warn("Firestore like update failed, reverting optimistic state:", err);
-      // Revert on failure
+      console.warn("FastAPI like update failed, reverting optimistic state:", err);
+      // Revert
       setLikedSongsList(prev => prev.filter(s => s.track_id !== track.track_id));
       setLikedSongIds(prev => {
         const next = new Set(prev);
@@ -117,6 +145,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ── Bỏ Thích Bài Hát (Unlike Song) ───────────────────────────────────────────
   const unlikeSong = async (trackId) => {
     if (!user) return;
     
@@ -132,13 +161,15 @@ export const AuthProvider = ({ children }) => {
     });
 
     try {
-      const userRef = doc(db, 'users', user.uid);
-      const snap = await getDoc(userRef);
-      if (!snap.exists()) return;
-      const liked = (snap.data().likedSongs || []).filter(s => s.track_id !== trackId);
-      await updateDoc(userRef, { likedSongs: liked });
+      const res = await fetch(`${API_URL}/songs/${trackId}/like?user_id=${user.uid}`, {
+        method: 'POST'
+      });
+      const json = await res.json();
+      if (json.status !== "success") {
+        throw new Error(json.message || "Failed to unlike song.");
+      }
     } catch (err) {
-      console.warn("Firestore unlike update failed, reverting optimistic state:", err);
+      console.warn("FastAPI unlike update failed, reverting optimistic state:", err);
       if (removedSong) {
         setLikedSongsList(prev => [...prev, removedSong]);
         setLikedSongIds(prev => new Set([...prev, trackId]));
@@ -146,39 +177,58 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ── Get Liked Songs from Firestore ──────────────────────────────────────────
+  // ── Lấy Danh Sách Bài Hát Yêu Thích ──────────────────────────────────────────
   const getLikedSongs = async () => {
     if (!user) return [];
-    const snap = await getDoc(doc(db, 'users', user.uid));
-    return snap.exists() ? (snap.data().likedSongs || []) : [];
+    try {
+      const res = await fetch(`${API_URL}/songs/liked?user_id=${user.uid}`);
+      const json = await res.json();
+      return json.status === "success" ? json.data : [];
+    } catch (err) {
+      console.warn("Failed to fetch liked list:", err);
+      return [];
+    }
   };
 
-  // ── Record a song play in history ───────────────────────────────────────────
+  // ── Ghi nhận lịch sử nghe (Record Song Play) ─────────────────────────────────
   const recordPlay = async (track) => {
     if (!user) return;
-    const userRef = doc(db, 'users', user.uid);
-    const entry = {
-      track_id: track.track_id,
-      track_name: track.track_name,
-      artists: track.artists,
-      playedAt: new Date().toISOString()
-    };
-    const snap = await getDoc(userRef);
-    const history = snap.exists() ? (snap.data().playHistory || []) : [];
-    const updated = [entry, ...history].slice(0, 50);
-    await updateDoc(userRef, { playHistory: updated });
+    try {
+      await fetch(`${API_URL}/songs/${track.track_id}/play?user_id=${user.uid}`, {
+        method: 'POST'
+      });
+    } catch (err) {
+      console.warn("Failed to record play history on backend:", err);
+    }
   };
 
-  // ── Get user play history ───────────────────────────────────────────────────
+  // ── Lấy Lịch Sử Phát Nhạc ────────────────────────────────────────────────────
   const getPlayHistory = async () => {
     if (!user) return [];
-    const snap = await getDoc(doc(db, 'users', user.uid));
-    return snap.exists() ? (snap.data().playHistory || []) : [];
+    try {
+      const res = await fetch(`${API_URL}/songs/history?user_id=${user.uid}`);
+      const json = await res.json();
+      return json.status === "success" ? json.data : [];
+    } catch (err) {
+      console.warn("Failed to fetch play history:", err);
+      return [];
+    }
   };
   
-  // ── Reset Password ──────────────────────────────────────────────────────────
+  // ── Đặt Lại Mật Khẩu (Reset Password) ────────────────────────────────────────
   const resetPassword = async (email) => {
-    await sendPasswordResetEmail(auth, email);
+    const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      const err = new Error(json.detail || 'Reset password failed.');
+      err.code = 'auth/user-not-found';
+      throw err;
+    }
+    return json.message;
   };
 
   const value = {

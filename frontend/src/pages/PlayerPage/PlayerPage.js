@@ -7,7 +7,7 @@ import styles from './PlayerPage.module.css';
 import { 
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat,
   Heart, Volume2, VolumeX, ListMusic, AlignLeft, Info,
-  ChevronLeft, Award, Disc
+  ChevronLeft, Award, Disc, Sparkles
 } from 'lucide-react';
 
 const getCoverImage = (trackId) => {
@@ -60,10 +60,37 @@ const PlayerPage = () => {
     setCurrentIndex, setCurrentSong
   } = usePlayback();
 
-  const [activeTab, setActiveTab] = useState('upnext'); // 'upnext' | 'lyrics' | 'info'
+  const [activeTab, setActiveTab] = useState('upnext'); // 'upnext' | 'lyrics' | 'info' | 'similar'
   // Uses global hoisted Likes state from AuthContext
   const [prevVolume, setPrevVolume] = useState(0.8);
   const lyricsContainerRef = useRef(null);
+  
+  const [similarSongs, setSimilarSongs] = useState([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
+
+  // Fetch similar songs whenever currentSong changes (Content-Based AI suggestions)
+  useEffect(() => {
+    const fetchSimilar = async () => {
+      if (!currentSong || !currentSong.track_id) return;
+      setLoadingSimilar(true);
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/recommend/content?song_id=${currentSong.track_id}&top_n=8`);
+        const json = await res.json();
+        if (json.status === "success") {
+          const data = json.data.map(song => ({
+            ...song,
+            cover_url: song.cover_url || getCoverImage(song.track_id)
+          }));
+          setSimilarSongs(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch similar songs:", err);
+      } finally {
+        setLoadingSimilar(false);
+      }
+    };
+    fetchSimilar();
+  }, [currentSong]);
 
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
   const songTitle = currentSong ? currentSong.track_name : "Không có bài hát";
@@ -259,19 +286,26 @@ const PlayerPage = () => {
               className={`${styles.tabBtn} ${activeTab === 'upnext' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('upnext')}
             >
-              <ListMusic size={18} /> Chờ phát ({queue.length})
+              <ListMusic size={16} /> Chờ phát ({queue.length})
+            </button>
+            <button 
+              className={`${styles.tabBtn} ${activeTab === 'similar' ? styles.activeTab : ''}`}
+              onClick={() => setActiveTab('similar')}
+              style={{ color: activeTab === 'similar' ? '#c084fc' : '#94a3b8' }}
+            >
+              <Sparkles size={16} style={{ color: activeTab === 'similar' ? '#c084fc' : '#94a3b8' }} /> Gợi ý AI
             </button>
             <button 
               className={`${styles.tabBtn} ${activeTab === 'lyrics' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('lyrics')}
             >
-              <AlignLeft size={18} /> Lời bài hát
+              <AlignLeft size={16} /> Lời bài hát
             </button>
             <button 
               className={`${styles.tabBtn} ${activeTab === 'info' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('info')}
             >
-              <Info size={18} /> Thông tin liên quan
+              <Info size={16} /> Thông tin
             </button>
           </div>
 
@@ -340,7 +374,57 @@ const PlayerPage = () => {
               </div>
             )}
 
-            {activeTab === 'info' && (
+            {activeTab === 'similar' && (
+              <div className={styles.similarWrapper}>
+                {!currentSong ? (
+                  <p className={styles.noInfoText}>Chọn một bài hát để xem gợi ý</p>
+                ) : loadingSimilar ? (
+                  <p className={styles.noInfoText}>Đang phân tích acoustic features...</p>
+                ) : similarSongs.length === 0 ? (
+                  <p className={styles.noInfoText}>Không tìm thấy bài hát tương đồng</p>
+                ) : (
+                  <div className={styles.similarList}>
+                    <div className={styles.similarBanner}>
+                      🪄 Gợi ý bài hát tương đồng dựa trên thuật toán Content-Based (KNN)
+                    </div>
+                    {similarSongs.map((song, idx) => {
+                      const isSongLiked = likedSongIds.has(song.track_id);
+                      return (
+                        <div 
+                          key={song.track_id + '-' + idx} 
+                          className={styles.similarItem}
+                          onClick={() => {
+                            playSong(song, similarSongs);
+                          }}
+                        >
+                          <span className={styles.similarIndex}>{idx + 1}</span>
+                          <img src={song.cover_url || getCoverImage(song.track_id)} alt={song.track_name} className={styles.similarThumb} />
+                          <div className={styles.similarInfo}>
+                            <h4 className={styles.similarTitle}>{song.track_name}</h4>
+                            <p className={styles.similarArtist}>{song.artists} • <span style={{ color: '#06b6d4' }}>{song.track_genre}</span></p>
+                          </div>
+                          <button 
+                            className={`${styles.similarLikeBtn} ${isSongLiked ? styles.liked : ''}`}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (isSongLiked) {
+                                await unlikeSong(song.track_id);
+                              } else {
+                                await likeSong(song);
+                              }
+                            }}
+                          >
+                            <Heart size={14} fill={isSongLiked ? '#ef4444' : 'none'} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+ 
+             {activeTab === 'info' && (
               <div className={styles.infoWrapper}>
                 {!currentSong ? (
                   <p className={styles.noInfoText}>Không có thông tin bài hát</p>

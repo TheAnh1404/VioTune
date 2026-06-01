@@ -368,25 +368,68 @@ def recommend_cf(user_id, top_n=5):
     
     user_id_str = str(user_id)
     
-    try:
-        firestore_df = fetch_firestore_interactions()
-    except Exception as e:
-        print(f"[CF] Lỗi lấy tương tác Firestore: {e}")
-        firestore_df = pd.DataFrame()
-        
     user_ratings = []
     listened_indices = []
     
-    if not firestore_df.empty:
-        user_rows = firestore_df[firestore_df["user_id"] == user_id_str]
-        if not user_rows.empty:
-            for _, row in user_rows.iterrows():
-                tid = row["track_id"]
-                if tid in track_index:
-                    t_idx = track_index[tid]
-                    r = np.log1p(row["play_count"])
-                    user_ratings.append((t_idx, r))
+    # 1a. Lấy tương tác cục bộ từ SQLite (liked_songs = 5 play_count, play_history = 1 play_count)
+    try:
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Thích bài hát
+        cursor.execute("SELECT track_id FROM liked_songs WHERE user_id = ?", (user_id_str,))
+        for row in cursor.fetchall():
+            tid = row[0]
+            if tid in track_index:
+                t_idx = track_index[tid]
+                user_ratings.append((t_idx, np.log1p(5)))
+                listened_indices.append(t_idx)
+                
+        # Lịch sử nghe nhạc
+        cursor.execute("SELECT track_id, COUNT(*) FROM play_history WHERE user_id = ? GROUP BY track_id", (user_id_str,))
+        for row in cursor.fetchall():
+            tid, cnt = row[0], row[1]
+            if tid in track_index:
+                t_idx = track_index[tid]
+                # Nếu đã thích trước đó, cộng gộp play_count
+                exists = False
+                for idx, (existing_t_idx, existing_r) in enumerate(user_ratings):
+                    if existing_t_idx == t_idx:
+                        user_ratings[idx] = (t_idx, np.log1p(5 + cnt))
+                        exists = True
+                        break
+                if not exists:
+                    user_ratings.append((t_idx, np.log1p(cnt)))
                     listened_indices.append(t_idx)
+                    
+        conn.close()
+    except Exception as e:
+        print(f"[CF] Lỗi lấy tương tác SQLite: {e}")
+        
+    # 1b. Gộp với dữ liệu Firestore từ SDK/REST
+    try:
+        firestore_df = fetch_firestore_interactions()
+        if not firestore_df.empty:
+            user_rows = firestore_df[firestore_df["user_id"] == user_id_str]
+            if not user_rows.empty:
+                for _, row in user_rows.iterrows():
+                    tid = row["track_id"]
+                    if tid in track_index:
+                        t_idx = track_index[tid]
+                        # Tránh trùng lặp với SQLite cục bộ
+                        exists = False
+                        for idx, (existing_t_idx, existing_r) in enumerate(user_ratings):
+                            if existing_t_idx == t_idx:
+                                exists = True
+                                break
+                        if not exists:
+                            r = np.log1p(row["play_count"])
+                            user_ratings.append((t_idx, r))
+                            listened_indices.append(t_idx)
+    except Exception as e:
+        print(f"[CF] Lỗi lấy tương tác Firestore: {e}")
+
 
     # 2. Nếu tìm thấy tương tác thời gian thực, tiến hành chiếu Fold-in
     if user_ratings:
