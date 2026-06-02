@@ -33,6 +33,7 @@ from src.hybrid import hybrid_recommend
 from src.content_based import recommend as content_recommend
 from src.collaborative import recommend_cf
 from api.db import get_db_connection
+import api.firebase_db as fdb
 
 app = FastAPI(title="VioTune API", description="Music Recommendation API", version="1.0.0")
 
@@ -201,6 +202,28 @@ def init_db():
     conn.commit()
     conn.close()
 
+    # Seed in Firestore
+    try:
+        existing_fs = fdb.query_documents("users", {"email": "test@viotune.com"}, limit=1)
+        if not existing_fs:
+            import datetime
+            uid = "test_user_seeded_id"
+            email = "test@viotune.com"
+            password_hash = hash_password("test12345")
+            display_name = "VioTune Test"
+            created_at = datetime.datetime.now().isoformat()
+            fdb.set_document("users", uid, {
+                "uid": uid,
+                "email": email,
+                "password_hash": password_hash,
+                "display_name": display_name,
+                "created_at": created_at
+            })
+            print("Seeded test user to Firestore successfully.")
+    except Exception as fe:
+        print(f"Error seeding test user to Firestore: {fe}")
+
+
 # Initialize SQLite tables
 try:
     init_db()
@@ -279,23 +302,21 @@ def signup(req: SignupRequest):
     if not email:
         raise HTTPException(status_code=400, detail="Email is required.")
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM users WHERE email = ?", (email,))
-    if cursor.fetchone():
-        conn.close()
+    existing_users = fdb.query_documents("users", {"email": email}, limit=1)
+    if existing_users:
         raise HTTPException(status_code=400, detail="This email is already registered.")
     
     uid = str(uuid.uuid4())
     password_hash = hash_password(req.password)
     created_at = datetime.datetime.now().isoformat()
     
-    cursor.execute(
-        "INSERT INTO users (uid, email, password_hash, display_name, created_at) VALUES (?, ?, ?, ?, ?)",
-        (uid, email, password_hash, req.displayName.strip(), created_at)
-    )
-    conn.commit()
-    conn.close()
+    fdb.set_document("users", uid, {
+        "uid": uid,
+        "email": email,
+        "password_hash": password_hash,
+        "display_name": req.displayName.strip(),
+        "created_at": created_at
+    })
     
     return {
         "status": "success",
@@ -309,15 +330,12 @@ def signup(req: SignupRequest):
 @app.post("/api/auth/signin")
 def signin(req: SigninRequest):
     email = req.email.strip().lower()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-    user_row = cursor.fetchone()
-    conn.close()
+    existing_users = fdb.query_documents("users", {"email": email}, limit=1)
     
-    if not user_row:
+    if not existing_users:
         raise HTTPException(status_code=400, detail="No account found with this email.")
         
+    user_row = existing_users[0]
     if not verify_password(req.password, user_row["password_hash"]):
         raise HTTPException(status_code=400, detail="Incorrect password.")
         
@@ -333,13 +351,9 @@ def signin(req: SigninRequest):
 @app.post("/api/auth/reset-password")
 def reset_password_route(req: ResetPasswordRequest):
     email = req.email.strip().lower()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM users WHERE email = ?", (email,))
-    user_exists = cursor.fetchone()
-    conn.close()
+    existing_users = fdb.query_documents("users", {"email": email}, limit=1)
     
-    if not user_exists:
+    if not existing_users:
         raise HTTPException(status_code=404, detail="No account found with this email.")
         
     return {
@@ -360,12 +374,13 @@ def record_song_play(track_id: str, user_id: str):
         
     try:
         import datetime
-        conn = get_db_connection()
-        cursor = conn.cursor()
         played_at = datetime.datetime.now().isoformat()
-        cursor.execute("INSERT INTO play_history (user_id, track_id, played_at) VALUES (?, ?, ?)", (user_id, track_id, played_at))
-        conn.commit()
-        conn.close()
+        play_id = f"{user_id}_{track_id}_{int(datetime.datetime.now().timestamp() * 1000)}"
+        fdb.set_document("play_history", play_id, {
+            "user_id": user_id,
+            "track_id": track_id,
+            "played_at": played_at
+        })
     except Exception as e:
         print(f"Error recording play history: {e}")
         
@@ -379,12 +394,9 @@ def get_user_taste_profile(user_id: str):
     # Get liked songs
     liked_ids = set()
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT track_id FROM liked_songs WHERE user_id = ?", (user_id,))
-        for row in cursor.fetchall():
-            liked_ids.add(row[0])
-        conn.close()
+        likes = fdb.query_documents("liked_songs", {"user_id": user_id})
+        for l in likes:
+            liked_ids.add(l["track_id"])
     except Exception as e:
         print(f"Error fetching liked songs for profile: {e}")
         
@@ -583,6 +595,9 @@ def search_songs(q: str = Query(..., min_length=1), limit: int = Query(10, ge=1,
                 "cover_url": r[5]
             })
         return {"status": "success", "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/artists/{artist_name}/tracks")
 def get_artist_tracks(artist_name: str, limit: int = Query(30, ge=1, le=100)):
     if songs_df.empty:
@@ -646,17 +661,13 @@ def get_liked_songs(user_id: str):
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     
-    # Query from local SQLite liked_songs
     liked_ids = set()
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT track_id FROM liked_songs WHERE user_id = ?", (user_id,))
-        for row in cursor.fetchall():
-            liked_ids.add(row[0])
-        conn.close()
+        likes = fdb.query_documents("liked_songs", {"user_id": user_id})
+        for l in likes:
+            liked_ids.add(l["track_id"])
     except Exception as e:
-        print(f"Error reading liked songs from DB: {e}")
+        print(f"Error reading liked songs from Firestore: {e}")
         
     # Merge with in-memory backup
     liked_ids.update(user_likes.get(user_id, set()))
@@ -666,6 +677,35 @@ def get_liked_songs(user_id: str):
     
     liked_songs = songs_df[songs_df['track_id'].isin(liked_ids)]
     return {"status": "success", "data": liked_songs[['track_id', 'track_name', 'artists', 'track_genre', 'popularity']].to_dict(orient="records")}
+
+
+@app.get("/songs/history")
+def get_play_history_route(user_id: str, limit: int = Query(20, ge=1, le=50)):
+    if songs_df.empty:
+        raise HTTPException(status_code=500, detail="Dataset not loaded")
+    
+    try:
+        # Query play_history documents from Firestore
+        history_rows = fdb.query_documents("play_history", {"user_id": user_id}, order_by="played_at", direction="DESCENDING", limit=limit)
+        
+        songs = []
+        for r in history_rows:
+            track_id = r["track_id"]
+            song_rows = songs_df[songs_df['track_id'] == track_id]
+            if not song_rows.empty:
+                song_row = song_rows.iloc[0]
+                songs.append({
+                    "track_id": track_id,
+                    "track_name": song_row["track_name"],
+                    "artists": song_row["artists"],
+                    "track_genre": song_row["track_genre"],
+                    "popularity": int(song_row["popularity"]),
+                    "played_at": r["played_at"]
+                })
+        return {"status": "success", "data": songs}
+    except Exception as e:
+        print(f"Error fetching play history from Firestore: {e}")
+        return {"status": "success", "data": []}
 
 
 @app.get("/songs/preview")
@@ -789,21 +829,18 @@ def like_song(track_id: str, user_id: str):
     if user_id not in user_likes:
         user_likes[user_id] = set()
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    import datetime
+    doc_id = f"{user_id}_{track_id}"
+    existing = fdb.get_document("liked_songs", doc_id)
     
-    # Check if already liked — idempotent, return success either way
-    cursor.execute("SELECT 1 FROM liked_songs WHERE user_id = ? AND track_id = ?", (user_id, track_id))
-    row = cursor.fetchone()
-    
-    if not row:
-        import datetime
+    if not existing:
         liked_at = datetime.datetime.now().isoformat()
-        cursor.execute("INSERT INTO liked_songs (user_id, track_id, liked_at) VALUES (?, ?, ?)", (user_id, track_id, liked_at))
-        user_likes[user_id].add(track_id)
-        conn.commit()
-        
-    conn.close()
+        fdb.set_document("liked_songs", doc_id, {
+            "user_id": user_id,
+            "track_id": track_id,
+            "liked_at": liked_at
+        })
+    user_likes[user_id].add(track_id)
     
     return {"status": "success", "liked": True, "message": "Song liked"}
 
@@ -817,15 +854,11 @@ def unlike_song(track_id: str, user_id: str):
     if user_id not in user_likes:
         user_likes[user_id] = set()
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    doc_id = f"{user_id}_{track_id}"
+    fdb.delete_document("liked_songs", doc_id)
     
-    cursor.execute("DELETE FROM liked_songs WHERE user_id = ? AND track_id = ?", (user_id, track_id))
     if track_id in user_likes[user_id]:
         user_likes[user_id].remove(track_id)
-    
-    conn.commit()
-    conn.close()
     
     return {"status": "success", "liked": False, "message": "Song unliked"}
 
@@ -928,26 +961,21 @@ def create_playlist(req: CreatePlaylistRequest):
     playlist_id = str(uuid.uuid4())
     created_at = datetime.datetime.now().isoformat()
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Verify user exists
-    cursor.execute("SELECT 1 FROM users WHERE uid = ?", (req.user_id,))
-    if not cursor.fetchone():
-        conn.close()
+    user = fdb.get_document("users", req.user_id)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
     try:
-        cursor.execute(
-            "INSERT INTO playlists (playlist_id, user_id, name, description, created_at) VALUES (?, ?, ?, ?, ?)",
-            (playlist_id, req.user_id, req.name.strip(), req.description, created_at)
-        )
-        conn.commit()
+        fdb.set_document("playlists", playlist_id, {
+            "playlist_id": playlist_id,
+            "user_id": req.user_id,
+            "name": req.name.strip(),
+            "description": req.description,
+            "created_at": created_at
+        })
     except Exception as e:
-        conn.close()
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
         
-    conn.close()
     return {
         "status": "success",
         "data": {
@@ -961,17 +989,11 @@ def create_playlist(req: CreatePlaylistRequest):
 
 @app.get("/users/{user_id}/playlists")
 def get_user_playlists(user_id: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Verify user exists
-    cursor.execute("SELECT 1 FROM users WHERE uid = ?", (user_id,))
-    if not cursor.fetchone():
-        conn.close()
+    user = fdb.get_document("users", user_id)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    cursor.execute("SELECT * FROM playlists WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
-    rows = cursor.fetchall()
+    rows = fdb.query_documents("playlists", {"user_id": user_id}, order_by="created_at", direction="DESCENDING")
     
     playlists = []
     for r in rows:
@@ -979,11 +1001,10 @@ def get_user_playlists(user_id: str):
             "playlist_id": r["playlist_id"],
             "user_id": r["user_id"],
             "name": r["name"],
-            "description": r["description"],
+            "description": r.get("description"),
             "created_at": r["created_at"]
         })
         
-    conn.close()
     return {"status": "success", "data": playlists}
 
 @app.post("/playlists/{playlist_id}/songs")
@@ -991,101 +1012,74 @@ def add_song_to_playlist(playlist_id: str, req: AddPlaylistSongRequest):
     import datetime
     added_at = datetime.datetime.now().isoformat()
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Verify playlist exists
-    cursor.execute("SELECT 1 FROM playlists WHERE playlist_id = ?", (playlist_id,))
-    if not cursor.fetchone():
-        conn.close()
+    playlist = fdb.get_document("playlists", playlist_id)
+    if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
         
-    # Verify song exists
-    cursor.execute("SELECT 1 FROM songs WHERE track_id = ?", (req.track_id,))
-    if not cursor.fetchone():
-        conn.close()
+    # Verify song exists in our local dataframe
+    song = songs_df[songs_df['track_id'] == req.track_id]
+    if song.empty:
         raise HTTPException(status_code=404, detail="Song not found")
         
-    # Check if song already in playlist
-    cursor.execute("SELECT 1 FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?", (playlist_id, req.track_id))
-    if cursor.fetchone():
-        conn.close()
+    doc_id = f"{playlist_id}_{req.track_id}"
+    existing = fdb.get_document("playlist_tracks", doc_id)
+    if existing:
         return {"status": "success", "message": "Song already in playlist"}
         
     try:
-        cursor.execute(
-            "INSERT INTO playlist_tracks (playlist_id, track_id, added_at) VALUES (?, ?, ?)",
-            (playlist_id, req.track_id, added_at)
-        )
-        conn.commit()
+        fdb.set_document("playlist_tracks", doc_id, {
+            "playlist_id": playlist_id,
+            "track_id": req.track_id,
+            "added_at": added_at
+        })
     except Exception as e:
-        conn.close()
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
         
-    conn.close()
     return {"status": "success", "message": "Song added to playlist"}
 
 @app.delete("/playlists/{playlist_id}/songs/{track_id}")
 def remove_song_from_playlist(playlist_id: str, track_id: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Verify playlist exists
-    cursor.execute("SELECT 1 FROM playlists WHERE playlist_id = ?", (playlist_id,))
-    if not cursor.fetchone():
-        conn.close()
+    playlist = fdb.get_document("playlists", playlist_id)
+    if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
         
     try:
-        cursor.execute("DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?", (playlist_id, track_id))
-        conn.commit()
+        doc_id = f"{playlist_id}_{track_id}"
+        fdb.delete_document("playlist_tracks", doc_id)
     except Exception as e:
-        conn.close()
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
         
-    conn.close()
     return {"status": "success", "message": "Song removed from playlist"}
 
 @app.get("/playlists/{playlist_id}/songs")
 def get_playlist_songs_route(playlist_id: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Verify playlist exists
-    cursor.execute("SELECT name, description FROM playlists WHERE playlist_id = ?", (playlist_id,))
-    playlist_row = cursor.fetchone()
-    if not playlist_row:
-        conn.close()
+    playlist = fdb.get_document("playlists", playlist_id)
+    if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
         
-    # Query songs in playlist joining songs table
-    query = """
-        SELECT s.track_id, s.track_name, s.artists, s.track_genre, s.popularity, pt.added_at
-        FROM playlist_tracks pt
-        JOIN songs s ON s.track_id = pt.track_id
-        WHERE pt.playlist_id = ?
-        ORDER BY pt.added_at ASC
-    """
-    cursor.execute(query, (playlist_id,))
-    rows = cursor.fetchall()
+    rows = fdb.query_documents("playlist_tracks", {"playlist_id": playlist_id}, order_by="added_at", direction="ASCENDING")
     
     songs = []
     for r in rows:
-        songs.append({
-            "track_id": r["track_id"],
-            "track_name": r["track_name"],
-            "artists": r["artists"],
-            "track_genre": r["track_genre"],
-            "popularity": r["popularity"],
-            "added_at": r["added_at"]
-        })
+        track_id = r["track_id"]
+        # Resolve song details from our static dataframe songs_df
+        song_rows = songs_df[songs_df['track_id'] == track_id]
+        if not song_rows.empty:
+            song_row = song_rows.iloc[0]
+            songs.append({
+                "track_id": track_id,
+                "track_name": song_row["track_name"],
+                "artists": song_row["artists"],
+                "track_genre": song_row["track_genre"],
+                "popularity": int(song_row["popularity"]),
+                "added_at": r["added_at"]
+            })
         
-    conn.close()
     return {
         "status": "success",
         "playlist": {
-            "name": playlist_row["name"],
-            "description": playlist_row["description"]
+            "name": playlist["name"],
+            "description": playlist.get("description")
         },
         "data": songs
     }

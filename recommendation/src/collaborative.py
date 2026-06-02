@@ -18,6 +18,13 @@ from dotenv import load_dotenv
 # Load environment variables
 current_dir = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(current_dir, "../.env"))
+
+# Add parent directory to sys.path to allow importing api.firebase_db
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+import api.firebase_db as fdb
+
 db_path = os.path.join(current_dir, "../data/viotune.db")
 songs_path = os.path.join(current_dir, "../data/dataset.csv")
 interactions_path = os.path.join(current_dir, "../data/interactions.csv")
@@ -248,113 +255,79 @@ def fetch_firestore_interactions():
     import os
     import requests
     
-    # Load .env configurations
-    project_id = os.getenv("FIREBASE_PROJECT_ID", "viotune-music")
-    credentials_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "viotuneteam6")
+    api_key = os.getenv("FIREBASE_API_KEY", "AIzaSyDfg87gFXYnAGRMO0j-dhHBOTj2IaoYFd4")
     
     new_interactions = []
     
-    # 1. Thử dùng Official SDK nếu có cấu hình credentials
-    if credentials_path and os.path.exists(credentials_path):
-        try:
-            from google.oauth2 import service_account
-            from google.cloud import firestore
-            
-            print("[Firestore SDK] Đang kết nối bằng Google Cloud SDK...")
-            credentials = service_account.Credentials.from_service_account_file(credentials_path)
-            db = firestore.Client(project=project_id, credentials=credentials)
-            
-            users_ref = db.collection("users")
-            for doc_item in users_ref.stream():
-                uid = doc_item.id
-                data = doc_item.to_dict()
-                
-                # Likes: 5 điểm tương tác
-                liked_songs = data.get("likedSongs", [])
-                for song in liked_songs:
-                    track_id = song.get("track_id")
-                    if track_id:
-                        new_interactions.append({
-                            "user_id": str(uid),
-                            "track_id": track_id,
-                            "play_count": 5
-                        })
-                        
-                # Lịch sử phát: 1 điểm mỗi lượt
-                play_history = data.get("playHistory", [])
-                for song in play_history:
-                    track_id = song.get("track_id")
-                    if track_id:
-                        new_interactions.append({
-                            "user_id": str(uid),
-                            "track_id": track_id,
-                            "play_count": 1
-                        })
-            
-            print(f"[Firestore SDK] Đồng bộ thành công {len(new_interactions)} tương tác.")
-            return pd.DataFrame(new_interactions)
-            
-        except Exception as sdk_err:
-            print(f"[Firestore SDK] Lỗi SDK: {sdk_err}. Chuyển sang dùng REST phân trang...")
-            
-    # 2. Cơ chế dự phòng REST API Phân trang (Resilient Paginated REST Fallback)
-    print("[Firestore REST] Đang đồng bộ bằng REST API có phân trang...")
-    url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/users"
+    # 1. Đồng bộ Liked Songs (play_count = 5)
+    url_liked = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/liked_songs"
     page_token = None
-    
     while True:
         try:
             params = {}
+            if api_key:
+                params["key"] = api_key
             if page_token:
                 params["pageToken"] = page_token
             
-            resp = requests.get(url, params=params, timeout=5)
+            resp = requests.get(url_liked, params=params, timeout=10)
             if resp.status_code != 200:
-                print(f"[Firestore REST] Lỗi mã phản hồi: {resp.status_code}")
                 break
                 
             data = resp.json()
             documents = data.get("documents", [])
-            
-            for doc_item in documents:
-                name_path = doc_item.get("name", "")
-                uid = name_path.split("/")[-1]
-                fields = doc_item.get("fields", {})
-                
-                # Lấy lượt thích
-                liked_songs = fields.get("likedSongs", {}).get("arrayValue", {}).get("values", [])
-                for song_val in liked_songs:
-                    song_fields = song_val.get("mapValue", {}).get("fields", {})
-                    track_id = song_fields.get("track_id", {}).get("stringValue")
-                    if track_id:
-                        new_interactions.append({
-                            "user_id": str(uid),
-                            "track_id": track_id,
-                            "play_count": 5
-                        })
-                
-                # Lấy lịch sử phát
-                play_history = fields.get("playHistory", {}).get("arrayValue", {}).get("values", [])
-                for play_val in play_history:
-                    play_fields = play_val.get("mapValue", {}).get("fields", {})
-                    track_id = play_fields.get("track_id", {}).get("stringValue")
-                    if track_id:
-                        new_interactions.append({
-                            "user_id": str(uid),
-                            "track_id": track_id,
-                            "play_count": 1
-                        })
-                        
-            # Lấy token trang tiếp theo
+            for doc in documents:
+                fields = doc.get("fields", {})
+                user_id = fields.get("user_id", {}).get("stringValue")
+                track_id = fields.get("track_id", {}).get("stringValue")
+                if user_id and track_id:
+                    new_interactions.append({
+                        "user_id": str(user_id),
+                        "track_id": track_id,
+                        "play_count": 5
+                    })
             page_token = data.get("nextPageToken")
             if not page_token:
                 break
-                
         except Exception as e:
-            print(f"[Firestore REST] Lỗi đồng bộ: {e}")
+            print(f"[Firestore REST Likes Fetch Error] {e}")
             break
             
-    print(f"[Firestore REST] Đồng bộ thành công {len(new_interactions)} tương tác.")
+    # 2. Đồng bộ Play History (play_count = 1)
+    url_history = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/play_history"
+    page_token = None
+    while True:
+        try:
+            params = {}
+            if api_key:
+                params["key"] = api_key
+            if page_token:
+                params["pageToken"] = page_token
+            
+            resp = requests.get(url_history, params=params, timeout=10)
+            if resp.status_code != 200:
+                break
+                
+            data = resp.json()
+            documents = data.get("documents", [])
+            for doc in documents:
+                fields = doc.get("fields", {})
+                user_id = fields.get("user_id", {}).get("stringValue")
+                track_id = fields.get("track_id", {}).get("stringValue")
+                if user_id and track_id:
+                    new_interactions.append({
+                        "user_id": str(user_id),
+                        "track_id": track_id,
+                        "play_count": 1
+                    })
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                break
+        except Exception as e:
+            print(f"[Firestore REST History Fetch Error] {e}")
+            break
+            
     return pd.DataFrame(new_interactions)
 
 
@@ -371,25 +344,29 @@ def recommend_cf(user_id, top_n=5):
     user_ratings = []
     listened_indices = []
     
-    # 1a. Lấy tương tác cục bộ từ SQLite (liked_songs = 5 play_count, play_history = 1 play_count)
+    # 1. Lấy bài hát đã thích của user này từ Firestore collection "liked_songs"
     try:
-        import sqlite3
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # Thích bài hát
-        cursor.execute("SELECT track_id FROM liked_songs WHERE user_id = ?", (user_id_str,))
-        for row in cursor.fetchall():
-            tid = row[0]
-            if tid in track_index:
+        likes = fdb.query_documents("liked_songs", {"user_id": user_id_str})
+        for l in likes:
+            tid = l.get("track_id")
+            if tid and tid in track_index:
                 t_idx = track_index[tid]
                 user_ratings.append((t_idx, np.log1p(5)))
                 listened_indices.append(t_idx)
+    except Exception as e:
+        print(f"[CF] Lỗi lấy tương tác liked_songs từ Firestore: {e}")
+        
+    # 2. Lấy lịch sử phát nhạc từ Firestore collection "play_history"
+    try:
+        history = fdb.query_documents("play_history", {"user_id": user_id_str})
+        # Group by track_id to sum play counts
+        track_counts = {}
+        for h in history:
+            tid = h.get("track_id")
+            if tid:
+                track_counts[tid] = track_counts.get(tid, 0) + 1
                 
-        # Lịch sử nghe nhạc
-        cursor.execute("SELECT track_id, COUNT(*) FROM play_history WHERE user_id = ? GROUP BY track_id", (user_id_str,))
-        for row in cursor.fetchall():
-            tid, cnt = row[0], row[1]
+        for tid, cnt in track_counts.items():
             if tid in track_index:
                 t_idx = track_index[tid]
                 # Nếu đã thích trước đó, cộng gộp play_count
@@ -402,33 +379,8 @@ def recommend_cf(user_id, top_n=5):
                 if not exists:
                     user_ratings.append((t_idx, np.log1p(cnt)))
                     listened_indices.append(t_idx)
-                    
-        conn.close()
     except Exception as e:
-        print(f"[CF] Lỗi lấy tương tác SQLite: {e}")
-        
-    # 1b. Gộp với dữ liệu Firestore từ SDK/REST
-    try:
-        firestore_df = fetch_firestore_interactions()
-        if not firestore_df.empty:
-            user_rows = firestore_df[firestore_df["user_id"] == user_id_str]
-            if not user_rows.empty:
-                for _, row in user_rows.iterrows():
-                    tid = row["track_id"]
-                    if tid in track_index:
-                        t_idx = track_index[tid]
-                        # Tránh trùng lặp với SQLite cục bộ
-                        exists = False
-                        for idx, (existing_t_idx, existing_r) in enumerate(user_ratings):
-                            if existing_t_idx == t_idx:
-                                exists = True
-                                break
-                        if not exists:
-                            r = np.log1p(row["play_count"])
-                            user_ratings.append((t_idx, r))
-                            listened_indices.append(t_idx)
-    except Exception as e:
-        print(f"[CF] Lỗi lấy tương tác Firestore: {e}")
+        print(f"[CF] Lỗi lấy lịch sử phát nhạc từ Firestore: {e}")
 
 
     # 2. Nếu tìm thấy tương tác thời gian thực, tiến hành chiếu Fold-in

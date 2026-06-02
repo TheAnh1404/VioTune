@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { signUp, signIn, resetPassword } = useAuth();
+  const { signUp, signIn, resetPassword, signInWithGoogle, signInWithFacebook } = useAuth();
   const [isActive, setIsActive] = useState(false);
 
   // SignUp state
@@ -45,7 +45,8 @@ const AuthPage = () => {
       const msg = {
         'auth/email-already-in-use': 'This email is already registered.',
         'auth/invalid-email': 'Invalid email address.',
-        'auth/weak-password': 'Password is too weak.'
+        'auth/weak-password': 'Password is too weak.',
+        'auth/operation-not-allowed': 'Phương thức đăng ký này chưa được kích hoạt trong Firebase Console.'
       }[err.code] || err.message;
       setSignUpError(msg);
     } finally {
@@ -66,7 +67,8 @@ const AuthPage = () => {
         'auth/user-not-found': 'No account found with this email.',
         'auth/wrong-password': 'Incorrect password.',
         'auth/invalid-email': 'Invalid email address.',
-        'auth/invalid-credential': 'Invalid email or password.'
+        'auth/invalid-credential': 'Invalid email or password.',
+        'auth/operation-not-allowed': 'Phương thức đăng nhập này chưa được kích hoạt trong Firebase Console.'
       }[err.code] || 'Login failed. Please try again.';
       setSignInError(msg);
     } finally {
@@ -93,6 +95,40 @@ const AuthPage = () => {
       setForgotError(msg);
     } finally {
       setForgotLoading(false);
+    }
+  };
+
+  // ── Handle Google Sign In ────────────────────────────────────────────────────
+  const handleGoogleSignIn = async () => {
+    setSignInError('');
+    setSignUpError('');
+    try {
+      await signInWithGoogle();
+      navigate('/home');
+    } catch (err) {
+      console.error("Google sign in failed:", err);
+      if (isActive) {
+        setSignUpError(err.message || "Google sign in failed.");
+      } else {
+        setSignInError(err.message || "Google sign in failed.");
+      }
+    }
+  };
+
+  // ── Handle Facebook Sign In ──────────────────────────────────────────────────
+  const handleFacebookSignIn = async () => {
+    setSignInError('');
+    setSignUpError('');
+    try {
+      await signInWithFacebook();
+      navigate('/home');
+    } catch (err) {
+      console.error("Facebook sign in failed:", err);
+      if (isActive) {
+        setSignUpError(err.message || "Facebook sign in failed.");
+      } else {
+        setSignInError(err.message || "Facebook sign in failed.");
+      }
     }
   };
 
@@ -143,6 +179,8 @@ const AuthPage = () => {
           buttonText={signUpLoading ? 'Creating...' : 'Sign Up'}
           inputs={signUpInputs}
           onSubmit={handleSignUp}
+          onGoogleClick={handleGoogleSignIn}
+          onFacebookClick={handleFacebookSignIn}
           error={signUpError}
         />
 
@@ -195,6 +233,8 @@ const AuthPage = () => {
             showForgot={true}
             onForgotClick={() => setIsForgotMode(true)}
             onSubmit={handleSignIn}
+            onGoogleClick={handleGoogleSignIn}
+            onFacebookClick={handleFacebookSignIn}
             error={signInError}
           />
         )}

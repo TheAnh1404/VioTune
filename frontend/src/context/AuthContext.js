@@ -1,5 +1,17 @@
-// ─── Tái Cấu Trúc AuthContext cho VioTune FastAPI Backend ────────────────────────
+// ─── AuthContext cho VioTune với Firebase Authentication Client SDK ────────────────────────
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { auth } from '../firebase';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  sendPasswordResetEmail, 
+  updateProfile, 
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
+  FacebookAuthProvider
+} from 'firebase/auth';
 import { API_URL } from '../config';
 
 const AuthContext = createContext(null);
@@ -16,48 +28,68 @@ export const AuthProvider = ({ children }) => {
   const [likedSongsList, setLikedSongsList] = useState([]);
   const [likedSongIds, setLikedSongIds] = useState(new Set());
 
-  // ── Khôi phục trạng thái đăng nhập từ localStorage khi mount ──────────────────
+  // ── Lắng nghe sự thay đổi trạng thái đăng nhập từ Firebase Auth ──────────────────
   useEffect(() => {
-    const restoreSession = async () => {
-      const saved = localStorage.getItem('viotune_user');
-      if (saved) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const u = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || 'VioTune User'
+        };
+        setUser(u);
+        localStorage.setItem('viotune_user', JSON.stringify(u));
+        
+        // Tải danh sách bài hát yêu thích từ backend
         try {
-          const parsedUser = JSON.parse(saved);
-          setUser(parsedUser);
-          
-          // Lấy danh sách bài hát yêu thích từ SQLite backend
-          const res = await fetch(`${API_URL}/songs/liked?user_id=${parsedUser.uid}`);
+          const res = await fetch(`${API_URL}/songs/liked?user_id=${firebaseUser.uid}`);
           const json = await res.json();
           if (json.status === "success") {
             setLikedSongsList(json.data);
             setLikedSongIds(new Set(json.data.map(s => s.track_id)));
           }
         } catch (err) {
-          console.warn("Failed to restore local session:", err);
-          localStorage.removeItem('viotune_user');
+          console.warn("Failed to fetch liked list on auth change:", err);
         }
+      } else {
+        setUser(null);
+        setLikedSongsList([]);
+        setLikedSongIds(new Set());
+        localStorage.removeItem('viotune_user');
       }
       setLoading(false);
-    };
-    restoreSession();
+    });
+    
+    return unsubscribe;
   }, []);
 
   // ── Đăng Ký (Sign Up) ─────────────────────────────────────────────────────────
   const signUp = async (email, password, displayName) => {
-    const response = await fetch(`${API_URL}/api/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, displayName })
-    });
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const firebaseUser = userCredential.user;
     
-    const json = await response.json();
-    if (!response.ok) {
-      throw new Error(json.detail || 'Failed to sign up.');
+    // Cập nhật display name trong Firebase Auth profile
+    await updateProfile(firebaseUser, { displayName });
+    
+    const newUser = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      displayName: displayName
+    };
+    
+    // Đồng bộ thông tin người dùng sang Firestore backend để kích hoạt test user và lưu trữ
+    try {
+      await fetch(`${API_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, displayName })
+      });
+    } catch (backendErr) {
+      console.warn("Failed to synchronize user to backend users collection:", backendErr);
     }
     
-    const newUser = json.user;
-    localStorage.setItem('viotune_user', JSON.stringify(newUser));
     setUser(newUser);
+    localStorage.setItem('viotune_user', JSON.stringify(newUser));
     setLikedSongsList([]);
     setLikedSongIds(new Set());
     return newUser;
@@ -65,29 +97,21 @@ export const AuthProvider = ({ children }) => {
 
   // ── Đăng Nhập (Sign In) ───────────────────────────────────────────────────────
   const signIn = async (email, password) => {
-    const response = await fetch(`${API_URL}/api/auth/signin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const firebaseUser = userCredential.user;
     
-    const json = await response.json();
-    if (!response.ok) {
-      // Create Firebase-like auth error structure for perfect backward compatibility
-      const err = new Error(json.detail || 'Login failed.');
-      err.code = json.detail === 'No account found with this email.' 
-        ? 'auth/user-not-found' 
-        : (json.detail === 'Incorrect password.' ? 'auth/wrong-password' : 'auth/invalid-credential');
-      throw err;
-    }
+    const loggedUser = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      displayName: firebaseUser.displayName || 'VioTune User'
+    };
     
-    const loggedUser = json.user;
-    localStorage.setItem('viotune_user', JSON.stringify(loggedUser));
     setUser(loggedUser);
+    localStorage.setItem('viotune_user', JSON.stringify(loggedUser));
     
     // Tải danh sách yêu thích
     try {
-      const likedRes = await fetch(`${API_URL}/songs/liked?user_id=${loggedUser.uid}`);
+      const likedRes = await fetch(`${API_URL}/songs/liked?user_id=${firebaseUser.uid}`);
       const likedJson = await likedRes.json();
       if (likedJson.status === "success") {
         setLikedSongsList(likedJson.data);
@@ -100,8 +124,73 @@ export const AuthProvider = ({ children }) => {
     return loggedUser;
   };
 
+  // ── Đăng Nhập Bằng Google ───────────────────────────────────────────────────
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const firebaseUser = userCredential.user;
+    
+    const loggedUser = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      displayName: firebaseUser.displayName || 'Google User'
+    };
+    
+    // Đồng bộ thông tin sang FastAPI Firestore backend
+    try {
+      await fetch(`${API_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: firebaseUser.email, 
+          password: 'social-auth-placeholder-password',
+          displayName: loggedUser.displayName 
+        })
+      });
+    } catch (backendErr) {
+      console.warn("Failed to synchronize Google user to backend:", backendErr);
+    }
+    
+    setUser(loggedUser);
+    localStorage.setItem('viotune_user', JSON.stringify(loggedUser));
+    return loggedUser;
+  };
+
+  // ── Đăng Nhập Bằng Facebook ───────────────────────────────────────────────────
+  const signInWithFacebook = async () => {
+    const provider = new FacebookAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const firebaseUser = userCredential.user;
+    
+    const loggedUser = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email || 'facebook-user@viotune.com',
+      displayName: firebaseUser.displayName || 'Facebook User'
+    };
+    
+    // Đồng bộ thông tin sang FastAPI Firestore backend
+    try {
+      await fetch(`${API_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: loggedUser.email, 
+          password: 'social-auth-placeholder-password',
+          displayName: loggedUser.displayName 
+        })
+      });
+    } catch (backendErr) {
+      console.warn("Failed to synchronize Facebook user to backend:", backendErr);
+    }
+    
+    setUser(loggedUser);
+    localStorage.setItem('viotune_user', JSON.stringify(loggedUser));
+    return loggedUser;
+  };
+
   // ── Đăng Xuất (Sign Out) ─────────────────────────────────────────────────────
   const logOut = async () => {
+    await signOut(auth);
     localStorage.removeItem('viotune_user');
     setUser(null);
     setLikedSongsList([]);
@@ -216,18 +305,8 @@ export const AuthProvider = ({ children }) => {
   
   // ── Đặt Lại Mật Khẩu (Reset Password) ────────────────────────────────────────
   const resetPassword = async (email) => {
-    const response = await fetch(`${API_URL}/api/auth/reset-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const json = await response.json();
-    if (!response.ok) {
-      const err = new Error(json.detail || 'Reset password failed.');
-      err.code = 'auth/user-not-found';
-      throw err;
-    }
-    return json.message;
+    await sendPasswordResetEmail(auth, email);
+    return "Password reset email sent successfully via Firebase.";
   };
 
   const value = {
@@ -237,6 +316,8 @@ export const AuthProvider = ({ children }) => {
     likedSongIds,
     signUp,
     signIn,
+    signInWithGoogle,
+    signInWithFacebook,
     logOut,
     likeSong,
     unlikeSong,

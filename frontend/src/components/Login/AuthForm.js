@@ -2,7 +2,7 @@ import React from 'react';
 import styles from './Login.module.css';
 import { Mail } from 'lucide-react';
 
-const AuthForm = ({ type, title, subtitle, inputs, buttonText, showForgot, onForgotClick, onSubmit, error, children }) => {
+const AuthForm = ({ type, title, subtitle, inputs, buttonText, showForgot, onForgotClick, onSubmit, error, onGoogleClick, onFacebookClick, children }) => {
   const isLoading = buttonText && (buttonText.includes('...'));
   return (
     <div className={`${styles.formContainer} ${type === 'signup' ? styles.signUp : styles.signIn}`}>
@@ -10,8 +10,12 @@ const AuthForm = ({ type, title, subtitle, inputs, buttonText, showForgot, onFor
         <h1 className={styles.title}>{title}</h1>
         
         <div className={styles.socialIcons}>
-          <a href="#" className={styles.icons}><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" alt="Google" /></a>
-          <a href="#" className={styles.icons}><img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" width="20" alt="Facebook" /></a>
+          <button type="button" onClick={onGoogleClick} className={styles.icons} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', outline: 'none' }}>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" alt="Google" />
+          </button>
+          <button type="button" onClick={onFacebookClick} className={styles.icons} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', outline: 'none' }}>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" width="20" alt="Facebook" />
+          </button>
           <a href="#" className={styles.icons}><Mail size={20} color="white" /></a>
         </div>
         
