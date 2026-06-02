@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePlayback } from '../../context/PlaybackContext';
 import Header from '../../components/Header/Header';
+import SideBarMenu from '../../components/SideBarMenu/SideBarMenu';
 import styles from './PlayerPage.module.css';
 import { 
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat,
@@ -53,6 +54,7 @@ const getSimulatedLyrics = (songTitle, artistName) => {
 const PlayerPage = () => {
   const navigate = useNavigate();
   const { user, logOut, likeSong, unlikeSong, likedSongsList, likedSongIds } = useAuth();
+  const userId = user?.uid || 'anonymous';
   
   const { 
     currentSong, isPlaying, queue, currentIndex, duration, currentTime,
@@ -182,7 +184,18 @@ const PlayerPage = () => {
         showSearch={false}
       />
 
-      <div className={styles.mainWrapper}>
+      <div className={styles.contentWrapper}>
+        <SideBarMenu 
+          userId={userId}
+          likedSongs={likedSongsList}
+          likedSongIds={likedSongIds}
+          onPlaySong={(song) => {
+            playSong(song, likedSongsList);
+          }}
+          currentSong={currentSong}
+        />
+        <div className={styles.mainContent}>
+          <div className={styles.mainWrapper}>
         
         {/* LEFT COLUMN: Spinning disc art & timeline controller */}
         <div className={styles.playerMainArea}>
@@ -487,6 +500,8 @@ const PlayerPage = () => {
         </div>
       </div>
     </div>
+  </div>
+</div>
   );
 };
 
