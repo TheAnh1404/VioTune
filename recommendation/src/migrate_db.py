@@ -17,6 +17,7 @@ def migrate():
 
     # Basic cleaning
     df = df.dropna(subset=["track_id", "track_name", "artists", "track_genre"])
+    df = df.drop_duplicates(subset=["track_id"])
     # Drop the unnamed index column if it exists
     if df.columns[0] == "":
         df = df.drop(df.columns[0], axis=1)
@@ -30,12 +31,39 @@ def migrate():
         os.remove(db_path)
 
     conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
     
-    # Write to sql
-    df.to_sql("songs", conn, if_exists="replace", index=False)
+    # Pre-create table with correct PRIMARY KEY to allow foreign key referential integrity
+    cursor.execute("""
+        CREATE TABLE songs (
+            track_id TEXT PRIMARY KEY,
+            artists TEXT,
+            album_name TEXT,
+            track_name TEXT,
+            popularity INTEGER,
+            duration_ms INTEGER,
+            explicit INTEGER,
+            danceability REAL,
+            energy REAL,
+            key INTEGER,
+            loudness REAL,
+            mode INTEGER,
+            speechiness REAL,
+            acousticness REAL,
+            instrumentalness REAL,
+            liveness REAL,
+            valence REAL,
+            tempo REAL,
+            time_signature INTEGER,
+            track_genre TEXT
+        )
+    """)
+    conn.commit()
+    
+    # Write to sql using 'append' since the table is already pre-created
+    df.to_sql("songs", conn, if_exists="append", index=False)
     
     print("Creating indices for high-performance queries...")
-    cursor = conn.cursor()
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_track_id ON songs(track_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_track_name ON songs(track_name);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_artists ON songs(artists);")

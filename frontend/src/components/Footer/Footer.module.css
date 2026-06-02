@@ -1,8 +1,10 @@
 .footerContainer {
-    width: 1272px;
-    height: 473px;
-    background: #2d3a4f; /* Màu nền xanh xám đặc trưng như ảnh */
-    border: 2px solid #5a6b89; /* Màu viền bao quanh */
+    max-width: 1272px;
+    width: 100%;
+    min-height: 473px;
+    background: rgba(255, 255, 255, 0.015);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 25px;
     padding: 50px 70px;
     display: flex;
@@ -10,7 +12,7 @@
     justify-content: space-between;
     color: white;
     font-family: 'Inter', sans-serif;
-    margin: 0 auto;
+    margin: 40px auto 0 auto;
     box-sizing: border-box;
 }
 
@@ -146,21 +148,28 @@
 
 .emailInput {
     width: 400px;
-    background: #94a3b8; /* Màu xám xanh của input trong ảnh */
-    border: none;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     padding: 15px 15px 15px 45px;
-    color: #1a202c;
+    color: #ffffff;
     font-weight: 500;
     outline: none;
+    transition: all 0.3s;
 }
 
 .emailInput::placeholder {
-    color: #4a5568;
+    color: #64748b;
+}
+
+.emailInput:focus {
+    border-color: rgba(167, 139, 250, 0.5);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 15px rgba(167, 139, 250, 0.1);
 }
 
 .subscribeBtn {
-    background: #28448c; /* Màu xanh đậm của nút Subscribe */
+    background: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
     color: white;
     border: none;
     padding: 0 35px;
@@ -168,11 +177,12 @@
     font-weight: 600;
     font-size: 16px;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: all 0.3s;
 }
 
 .subscribeBtn:hover {
-    background: #1e3a8a;
+    filter: brightness(1.15);
+    transform: translateY(-1px);
 }
 
 .socialWrapper {

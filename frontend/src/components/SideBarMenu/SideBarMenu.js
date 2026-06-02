@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './SideBarMenu.module.css';
 import { 
   Home, Heart, ListMusic, Globe, 
@@ -42,13 +42,23 @@ const SidebarItem = ({ icon: Icon, label, active, expanded, onClick }) => {
 
 const SideBarMenu = ({ userId = "42", likedSongs = [], likedSongIds = new Set(), refreshTrigger = 0, onPlaySong, currentSong }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('Home');
   const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/home')) setActiveTab('Home');
+    else if (path.startsWith('/recommendation')) setActiveTab('Favorite');
+    else if (path.startsWith('/playlists')) setActiveTab('Playlists');
+    else if (path.startsWith('/search')) setActiveTab('Browser');
+    else if (path.startsWith('/artist')) setActiveTab('Browser');
+  }, [location]);
 
   const menuItems = [
     { id: 'Home', label: 'Home', icon: Home, path: '/home' },
     { id: 'Favorite', label: 'Comparative Sandbox', icon: Heart, path: '/recommendation' },
-    { id: 'Playlists', label: 'My Favorites', icon: ListMusic, action: 'scroll-favorites' },
+    { id: 'Playlists', label: 'Playlists', icon: ListMusic, path: '/playlists' },
     { id: 'Browser', label: 'Search Songs', icon: Globe, path: '/search' },
   ];
 

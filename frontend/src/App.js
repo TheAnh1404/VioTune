@@ -10,6 +10,8 @@ import Recommendation from './components/Recommendation';
 import HomePage from './pages/HomePage/HomePage';
 import SearchPage from './pages/SearchPage/SearchPage';
 import PlayerPage from './pages/PlayerPage/PlayerPage';
+import PlaylistsPage from './pages/PlaylistsPage/PlaylistsPage';
+import ArtistPage from './pages/ArtistPage/ArtistPage';
 
 function App() {
   return (
@@ -34,6 +36,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <SearchPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/playlists"
+                element={
+                  <ProtectedRoute>
+                    <PlaylistsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/artist/:artistName"
+                element={
+                  <ProtectedRoute>
+                    <ArtistPage />
                   </ProtectedRoute>
                 }
               />

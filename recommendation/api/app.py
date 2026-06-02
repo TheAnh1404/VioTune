@@ -32,6 +32,7 @@ import datetime
 from src.hybrid import hybrid_recommend
 from src.content_based import recommend as content_recommend
 from src.collaborative import recommend_cf
+from api.db import get_db_connection
 
 app = FastAPI(title="VioTune API", description="Music Recommendation API", version="1.0.0")
 
@@ -66,12 +67,20 @@ class SigninRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     email: str
 
+class CreatePlaylistRequest(BaseModel):
+    user_id: str
+    name: str
+    description: Optional[str] = None
+
+class AddPlaylistSongRequest(BaseModel):
+    track_id: str
+
 # Table Initializer function
 def init_db():
-    import sqlite3
-    conn = sqlite3.connect(db_path)
+    conn = get_db_connection()
     cursor = conn.cursor()
-    # Users table
+    
+    # 1. Users table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             uid TEXT PRIMARY KEY,
@@ -81,25 +90,58 @@ def init_db():
             created_at TEXT
         )
     """)
-    # Liked songs table
+    
+    # 2. Songs table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS songs (
+            track_id TEXT PRIMARY KEY,
+            artists TEXT,
+            album_name TEXT,
+            track_name TEXT,
+            popularity INTEGER,
+            duration_ms INTEGER,
+            explicit INTEGER,
+            danceability REAL,
+            energy REAL,
+            key INTEGER,
+            loudness REAL,
+            mode INTEGER,
+            speechiness REAL,
+            acousticness REAL,
+            instrumentalness REAL,
+            liveness REAL,
+            valence REAL,
+            tempo REAL,
+            time_signature INTEGER,
+            track_genre TEXT
+        )
+    """)
+    
+    # 3. Liked songs table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS liked_songs (
             user_id TEXT,
             track_id TEXT,
             liked_at TEXT,
-            PRIMARY KEY (user_id, track_id)
+            PRIMARY KEY (user_id, track_id),
+            FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE,
+            FOREIGN KEY (track_id) REFERENCES songs(track_id) ON DELETE CASCADE
         )
     """)
-    # Play history table
+    
+    # 4. Play history table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS play_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT,
             track_id TEXT,
-            played_at TEXT
+            played_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE,
+            FOREIGN KEY (track_id) REFERENCES songs(track_id) ON DELETE CASCADE
         )
     """)
-    # Deezer cache table
+    
+    # 5. Deezer cache table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS deezer_cache (
             cache_key TEXT PRIMARY KEY,
@@ -110,6 +152,52 @@ def init_db():
             found INTEGER
         )
     """)
+    
+    # 6. Playlists table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS playlists (
+            playlist_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE
+        )
+    """)
+    
+    # 7. Playlist tracks table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS playlist_tracks (
+            playlist_id TEXT,
+            track_id TEXT,
+            added_at TEXT NOT NULL,
+            PRIMARY KEY (playlist_id, track_id),
+            FOREIGN KEY (playlist_id) REFERENCES playlists(playlist_id) ON DELETE CASCADE,
+            FOREIGN KEY (track_id) REFERENCES songs(track_id) ON DELETE CASCADE
+        )
+    """)
+    
+    # 8. Create optimized indexes
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_liked_user_track ON liked_songs(user_id, track_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_user ON play_history(user_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_deezer_cache_key ON deezer_cache(cache_key);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_playlist_user ON playlists(user_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_playlist_track ON playlist_tracks(playlist_id, track_id);")
+    
+    # 9. Seed a default developer test user if it does not exist
+    cursor.execute("SELECT 1 FROM users WHERE email = 'test@viotune.com'")
+    if not cursor.fetchone():
+        import datetime
+        uid = "test_user_seeded_id"
+        email = "test@viotune.com"
+        password_hash = hash_password("test12345")
+        display_name = "VioTune Test"
+        created_at = datetime.datetime.now().isoformat()
+        cursor.execute(
+            "INSERT INTO users (uid, email, password_hash, display_name, created_at) VALUES (?, ?, ?, ?, ?)",
+            (uid, email, password_hash, display_name, created_at)
+        )
+        
     conn.commit()
     conn.close()
 
@@ -150,8 +238,7 @@ current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 db_path = os.path.join(current_dir, "data/viotune.db")
 
 try:
-    import sqlite3
-    conn = sqlite3.connect(db_path)
+    conn = get_db_connection()
     songs_df = pd.read_sql("SELECT * FROM songs", conn)
     conn.close()
     print("Dataset loaded from SQLite viotune.db successfully.")
@@ -185,7 +272,6 @@ def home():
 # --- AUTH ENPOINTS ---
 @app.post("/api/auth/signup")
 def signup(req: SignupRequest):
-    import sqlite3
     import datetime
     import uuid
     
@@ -193,7 +279,7 @@ def signup(req: SignupRequest):
     if not email:
         raise HTTPException(status_code=400, detail="Email is required.")
     
-    conn = sqlite3.connect(db_path)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT 1 FROM users WHERE email = ?", (email,))
     if cursor.fetchone():
@@ -222,11 +308,8 @@ def signup(req: SignupRequest):
 
 @app.post("/api/auth/signin")
 def signin(req: SigninRequest):
-    import sqlite3
-    
     email = req.email.strip().lower()
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
     user_row = cursor.fetchone()
@@ -249,10 +332,8 @@ def signin(req: SigninRequest):
 
 @app.post("/api/auth/reset-password")
 def reset_password_route(req: ResetPasswordRequest):
-    import sqlite3
-    
     email = req.email.strip().lower()
-    conn = sqlite3.connect(db_path)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT 1 FROM users WHERE email = ?", (email,))
     user_exists = cursor.fetchone()
@@ -278,9 +359,8 @@ def record_song_play(track_id: str, user_id: str):
         raise HTTPException(status_code=404, detail="Song not found")
         
     try:
-        import sqlite3
         import datetime
-        conn = sqlite3.connect(db_path)
+        conn = get_db_connection()
         cursor = conn.cursor()
         played_at = datetime.datetime.now().isoformat()
         cursor.execute("INSERT INTO play_history (user_id, track_id, played_at) VALUES (?, ?, ?)", (user_id, track_id, played_at))
@@ -299,8 +379,7 @@ def get_user_taste_profile(user_id: str):
     # Get liked songs
     liked_ids = set()
     try:
-        import sqlite3
-        conn = sqlite3.connect(db_path)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT track_id FROM liked_songs WHERE user_id = ?", (user_id,))
         for row in cursor.fetchall():
@@ -474,22 +553,11 @@ def recommend_collaborative(user_id: str, top_n: int = Query(5, ge=1, le=50)):
 
 @app.get("/songs/search")
 def search_songs(q: str = Query(..., min_length=1), limit: int = Query(10, ge=1, le=50)):
-    import sqlite3
-    db_path = os.path.join(current_dir, "data/viotune.db")
-    
-    if not os.path.exists(db_path):
-        if songs_df.empty:
-            raise HTTPException(status_code=500, detail="Dataset not loaded")
-        q_lower = q.lower()
-        matches = songs_df[
-            songs_df['track_name'].str.lower().str.contains(q_lower, na=False) |
-            songs_df['artists'].str.lower().str.contains(q_lower, na=False) |
-            songs_df['track_genre'].str.lower().str.contains(q_lower, na=False)
-        ].head(limit)
-        return {"status": "success", "data": matches[['track_id', 'track_name', 'artists', 'track_genre', 'popularity']].to_dict(orient="records")}
+    if songs_df.empty:
+        raise HTTPException(status_code=500, detail="Dataset not loaded")
         
     try:
-        conn = sqlite3.connect(db_path)
+        conn = get_db_connection()
         cursor = conn.cursor()
         # High performance query utilizing SQLite indexing and caching LEFT JOIN
         query = """
@@ -513,6 +581,44 @@ def search_songs(q: str = Query(..., min_length=1), limit: int = Query(10, ge=1,
                 "track_genre": r[3],
                 "popularity": r[4],
                 "cover_url": r[5]
+            })
+        return {"status": "success", "data": data}
+@app.get("/artists/{artist_name}/tracks")
+def get_artist_tracks(artist_name: str, limit: int = Query(30, ge=1, le=100)):
+    if songs_df.empty:
+        raise HTTPException(status_code=500, detail="Dataset not loaded")
+        
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = """
+            SELECT s.track_id, s.track_name, s.artists, s.track_genre, s.popularity, 
+                   s.danceability, s.energy, s.acousticness, s.valence, s.tempo, c.cover_url
+            FROM songs s
+            LEFT JOIN deezer_cache c ON c.cache_key = (LOWER(s.track_name) || '|' || LOWER(s.artists))
+            WHERE s.artists LIKE ?
+            ORDER BY s.popularity DESC
+            LIMIT ?
+        """
+        search_val = f"%{artist_name}%"
+        cursor.execute(query, (search_val, limit))
+        rows = cursor.fetchall()
+        conn.close()
+        
+        data = []
+        for r in rows:
+            data.append({
+                "track_id": r[0],
+                "track_name": r[1],
+                "artists": r[2],
+                "track_genre": r[3],
+                "popularity": r[4],
+                "danceability": r[5],
+                "energy": r[6],
+                "acousticness": r[7],
+                "valence": r[8],
+                "tempo": r[9],
+                "cover_url": r[10]
             })
         return {"status": "success", "data": data}
     except Exception as e:
@@ -543,8 +649,7 @@ def get_liked_songs(user_id: str):
     # Query from local SQLite liked_songs
     liked_ids = set()
     try:
-        import sqlite3
-        conn = sqlite3.connect(db_path)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT track_id FROM liked_songs WHERE user_id = ?", (user_id,))
         for row in cursor.fetchall():
@@ -569,46 +674,29 @@ def get_song_preview_route(track_name: str, artist: str):
     Proxy to Deezer: search by track_name + artist, return a 30s MP3 preview_url.
     Results are cached in a persistent SQLite table to survive server restarts.
     """
-    import sqlite3
-    db_path = os.path.join(current_dir, "data/viotune.db")
     cache_key = f"{track_name.lower()}|{artist.lower()}"
     
     # 1. Thử lấy từ SQLite cache
-    if os.path.exists(db_path):
-        try:
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            # Đảm bảo bảng tồn tại
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS deezer_cache (
-                    cache_key TEXT PRIMARY KEY,
-                    preview_url TEXT,
-                    cover_url TEXT,
-                    deezer_title TEXT,
-                    deezer_artist TEXT,
-                    found INTEGER
-                )
-            """)
-            conn.commit()
-            
-            cursor.execute("SELECT * FROM deezer_cache WHERE cache_key = ?", (cache_key,))
-            cached_row = cursor.fetchone()
-            conn.close()
-            
-            if cached_row:
-                return {
-                    "status": "success",
-                    "data": {
-                        "preview_url": cached_row["preview_url"],
-                        "cover_url": cached_row["cover_url"],
-                        "deezer_title": cached_row["deezer_title"],
-                        "deezer_artist": cached_row["deezer_artist"],
-                        "found": bool(cached_row["found"])
-                    }
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM deezer_cache WHERE cache_key = ?", (cache_key,))
+        cached_row = cursor.fetchone()
+        conn.close()
+        
+        if cached_row:
+            return {
+                "status": "success",
+                "data": {
+                    "preview_url": cached_row["preview_url"],
+                    "cover_url": cached_row["cover_url"],
+                    "deezer_title": cached_row["deezer_title"],
+                    "deezer_artist": cached_row["deezer_artist"],
+                    "found": bool(cached_row["found"])
                 }
-        except Exception as cache_err:
-            print(f"[Deezer Cache] Lỗi đọc cache: {cache_err}")
+            }
+    except Exception as cache_err:
+        print(f"[Deezer Cache] Lỗi đọc cache: {cache_err}")
 
     # 2. Gọi Deezer API nếu không có trong cache
     import urllib.parse as _urlparse
@@ -644,19 +732,18 @@ def get_song_preview_route(track_name: str, artist: str):
         }
 
         # 3. Lưu vào SQLite cache để tái sử dụng
-        if os.path.exists(db_path):
-            try:
-                conn = sqlite3.connect(db_path)
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT OR REPLACE INTO deezer_cache 
-                    (cache_key, preview_url, cover_url, deezer_title, deezer_artist, found)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (cache_key, preview_url, cover_url, deezer_title, deezer_artist_name, int(preview_url is not None)))
-                conn.commit()
-                conn.close()
-            except Exception as cache_write_err:
-                print(f"[Deezer Cache] Lỗi ghi cache: {cache_write_err}")
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO deezer_cache 
+                (cache_key, preview_url, cover_url, deezer_title, deezer_artist, found)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (cache_key, preview_url, cover_url, deezer_title, deezer_artist_name, int(preview_url is not None)))
+            conn.commit()
+            conn.close()
+        except Exception as cache_write_err:
+            print(f"[Deezer Cache] Lỗi ghi cache: {cache_write_err}")
 
         return {"status": "success", "data": result}
 
@@ -669,21 +756,11 @@ def get_song_preview_route(track_name: str, artist: str):
 
 @app.get("/songs/{track_id}")
 def get_song(track_id: str):
-    import sqlite3
-    db_path = os.path.join(current_dir, "data/viotune.db")
-    
-    if not os.path.exists(db_path):
-        if songs_df.empty:
-            raise HTTPException(status_code=500, detail="Dataset not loaded")
-        song = songs_df[songs_df['track_id'] == track_id]
-        if song.empty:
-            raise HTTPException(status_code=404, detail="Song not found")
-        return {"status": "success", "data": song.iloc[0].to_dict()}
-
+    if songs_df.empty:
+        raise HTTPException(status_code=500, detail="Dataset not loaded")
+        
     try:
-        conn = sqlite3.connect(db_path)
-        # Configure row factory to return dictionaries
-        conn.row_factory = sqlite3.Row
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM songs WHERE track_id = ? LIMIT 1", (track_id,))
         row = cursor.fetchone()
@@ -712,8 +789,7 @@ def like_song(track_id: str, user_id: str):
     if user_id not in user_likes:
         user_likes[user_id] = set()
     
-    import sqlite3
-    conn = sqlite3.connect(db_path)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Check if already liked — idempotent, return success either way
@@ -741,8 +817,7 @@ def unlike_song(track_id: str, user_id: str):
     if user_id not in user_likes:
         user_likes[user_id] = set()
     
-    import sqlite3
-    conn = sqlite3.connect(db_path)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("DELETE FROM liked_songs WHERE user_id = ? AND track_id = ?", (user_id, track_id))
@@ -841,3 +916,176 @@ def get_mock_albums(limit: int = Query(5, ge=1, le=20)):
             "imageUrl": cover
         })
     return {"status": "success", "data": albums}
+
+
+# --- USER PLAYLISTS APIS ---
+
+@app.post("/playlists")
+def create_playlist(req: CreatePlaylistRequest):
+    import uuid
+    import datetime
+    
+    playlist_id = str(uuid.uuid4())
+    created_at = datetime.datetime.now().isoformat()
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Verify user exists
+    cursor.execute("SELECT 1 FROM users WHERE uid = ?", (req.user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    try:
+        cursor.execute(
+            "INSERT INTO playlists (playlist_id, user_id, name, description, created_at) VALUES (?, ?, ?, ?, ?)",
+            (playlist_id, req.user_id, req.name.strip(), req.description, created_at)
+        )
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        
+    conn.close()
+    return {
+        "status": "success",
+        "data": {
+            "playlist_id": playlist_id,
+            "user_id": req.user_id,
+            "name": req.name,
+            "description": req.description,
+            "created_at": created_at
+        }
+    }
+
+@app.get("/users/{user_id}/playlists")
+def get_user_playlists(user_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Verify user exists
+    cursor.execute("SELECT 1 FROM users WHERE uid = ?", (user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    cursor.execute("SELECT * FROM playlists WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+    rows = cursor.fetchall()
+    
+    playlists = []
+    for r in rows:
+        playlists.append({
+            "playlist_id": r["playlist_id"],
+            "user_id": r["user_id"],
+            "name": r["name"],
+            "description": r["description"],
+            "created_at": r["created_at"]
+        })
+        
+    conn.close()
+    return {"status": "success", "data": playlists}
+
+@app.post("/playlists/{playlist_id}/songs")
+def add_song_to_playlist(playlist_id: str, req: AddPlaylistSongRequest):
+    import datetime
+    added_at = datetime.datetime.now().isoformat()
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Verify playlist exists
+    cursor.execute("SELECT 1 FROM playlists WHERE playlist_id = ?", (playlist_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Playlist not found")
+        
+    # Verify song exists
+    cursor.execute("SELECT 1 FROM songs WHERE track_id = ?", (req.track_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Song not found")
+        
+    # Check if song already in playlist
+    cursor.execute("SELECT 1 FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?", (playlist_id, req.track_id))
+    if cursor.fetchone():
+        conn.close()
+        return {"status": "success", "message": "Song already in playlist"}
+        
+    try:
+        cursor.execute(
+            "INSERT INTO playlist_tracks (playlist_id, track_id, added_at) VALUES (?, ?, ?)",
+            (playlist_id, req.track_id, added_at)
+        )
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        
+    conn.close()
+    return {"status": "success", "message": "Song added to playlist"}
+
+@app.delete("/playlists/{playlist_id}/songs/{track_id}")
+def remove_song_from_playlist(playlist_id: str, track_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Verify playlist exists
+    cursor.execute("SELECT 1 FROM playlists WHERE playlist_id = ?", (playlist_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Playlist not found")
+        
+    try:
+        cursor.execute("DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?", (playlist_id, track_id))
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        
+    conn.close()
+    return {"status": "success", "message": "Song removed from playlist"}
+
+@app.get("/playlists/{playlist_id}/songs")
+def get_playlist_songs_route(playlist_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Verify playlist exists
+    cursor.execute("SELECT name, description FROM playlists WHERE playlist_id = ?", (playlist_id,))
+    playlist_row = cursor.fetchone()
+    if not playlist_row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Playlist not found")
+        
+    # Query songs in playlist joining songs table
+    query = """
+        SELECT s.track_id, s.track_name, s.artists, s.track_genre, s.popularity, pt.added_at
+        FROM playlist_tracks pt
+        JOIN songs s ON s.track_id = pt.track_id
+        WHERE pt.playlist_id = ?
+        ORDER BY pt.added_at ASC
+    """
+    cursor.execute(query, (playlist_id,))
+    rows = cursor.fetchall()
+    
+    songs = []
+    for r in rows:
+        songs.append({
+            "track_id": r["track_id"],
+            "track_name": r["track_name"],
+            "artists": r["artists"],
+            "track_genre": r["track_genre"],
+            "popularity": r["popularity"],
+            "added_at": r["added_at"]
+        })
+        
+    conn.close()
+    return {
+        "status": "success",
+        "playlist": {
+            "name": playlist_row["name"],
+            "description": playlist_row["description"]
+        },
+        "data": songs
+    }

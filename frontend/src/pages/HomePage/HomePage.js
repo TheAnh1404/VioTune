@@ -227,7 +227,7 @@ const HomePage = () => {
                 <ErrorBoundary>
                   <ArtistsFollowed 
                     artists={popularArtists}
-                    onArtistClick={() => navigate('/search')}
+                    onArtistClick={(artistName) => navigate(`/artist/${encodeURIComponent(artistName)}`)}
                   />
                   
                   <HeroSeries 
@@ -251,7 +251,7 @@ const HomePage = () => {
                   
                   <MoreArtists 
                     artists={popularArtists}
-                    onArtistClick={() => navigate('/search')}
+                    onArtistClick={(artistName) => navigate(`/artist/${encodeURIComponent(artistName)}`)}
                   />
                 </ErrorBoundary>
 
