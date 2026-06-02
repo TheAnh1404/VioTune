@@ -8,7 +8,7 @@ import Footer from '../../components/Footer/Footer';
 import styles from './PlaylistsPage.module.css';
 import { 
   Play, Plus, Music, Trash2, Calendar, FolderHeart, 
-  Sparkles, ListMusic, Heading1, AlertCircle, Heart 
+  Sparkles, ListMusic, AlertCircle, Heart 
 } from 'lucide-react';
 import { API_URL } from '../../config';
 
@@ -31,7 +31,7 @@ const getCoverImage = (trackId) => {
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return "Recently";
+  if (!dateString) return "Mới đây";
   const date = new Date(dateString);
   return date.toLocaleDateString('vi-VN', { year: 'numeric', month: 'short', day: 'numeric' });
 };
@@ -44,20 +44,20 @@ const PlaylistsPage = () => {
   const userId = user?.uid || 'anonymous';
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
 
-  // State
+  // Playlists lists & active states
   const [playlists, setPlaylists] = useState([]);
   const [activePlaylist, setActivePlaylist] = useState(null);
   const [playlistSongs, setPlaylistSongs] = useState([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
   const [loadingSongs, setLoadingSongs] = useState(false);
   
-  // Modal State
+  // Creation modal controls
   const [showModal, setShowModal] = useState(false);
   const [playlistName, setPlaylistName] = useState("");
   const [playlistDesc, setPlaylistDesc] = useState("");
   const [modalError, setModalError] = useState("");
 
-  // 1. Fetch playlists on mount
+  // Fetch playlists on mount
   const fetchPlaylists = async () => {
     if (!user) return;
     setLoadingPlaylists(true);
@@ -79,10 +79,9 @@ const PlaylistsPage = () => {
 
   useEffect(() => {
     fetchPlaylists();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user]); // eslint-disable-next-line react-hooks/exhaustive-deps
 
-  // 2. Fetch songs of active playlist
+  // Load songs of active playlist
   useEffect(() => {
     const fetchPlaylistSongs = async () => {
       if (!activePlaylist) {
@@ -105,7 +104,7 @@ const PlaylistsPage = () => {
     fetchPlaylistSongs();
   }, [activePlaylist]);
 
-  // 3. Create a new playlist
+  // Create new playlist
   const handleCreatePlaylist = async (e) => {
     e.preventDefault();
     if (!playlistName.trim()) {
@@ -128,7 +127,8 @@ const PlaylistsPage = () => {
         setShowModal(false);
         setPlaylistName("");
         setPlaylistDesc("");
-        // Reload playlists and select new one
+        
+        // Refresh lists and select newly created playlist
         const updatedRes = await fetch(`${API_URL}/users/${user.uid}/playlists`);
         const updatedJson = await updatedRes.json();
         if (updatedJson.status === "success") {
@@ -144,7 +144,7 @@ const PlaylistsPage = () => {
     }
   };
 
-  // 4. Remove song from playlist
+  // Delete song from playlist
   const handleRemoveSong = async (e, trackId) => {
     e.stopPropagation();
     if (!activePlaylist) return;
@@ -154,7 +154,6 @@ const PlaylistsPage = () => {
       });
       const json = await res.json();
       if (json.status === "success") {
-        // Refresh local playlist songs state optimistically
         setPlaylistSongs(prev => prev.filter(s => s.track_id !== trackId));
       }
     } catch (err) {
@@ -198,24 +197,29 @@ const PlaylistsPage = () => {
         />
         <div className={styles.mainContent}>
           <div className={styles.playlistPanel}>
-            {/* LEFT COLUMN: Playlists list */}
+            
+            {/* LEFT COLUMN: Playlist Catalogs list */}
             <div className={styles.leftCol}>
               <div className={styles.listHeader}>
-                <h2 className={styles.colTitle}><ListMusic size={22} className={styles.titleIcon} /> Danh sách phát</h2>
+                <h2 className={styles.colTitle}>
+                  <ListMusic size={20} className={styles.titleIcon} /> Thư mục phát
+                </h2>
                 <button className={styles.createBtn} onClick={() => setShowModal(true)} title="Tạo playlist mới">
-                  <Plus size={18} /> Tạo mới
+                  <Plus size={16} /> Tạo mới
                 </button>
               </div>
 
               {loadingPlaylists && (
-                <div className={styles.loader}>Đang tải...</div>
+                <div className={styles.noPlaylists}>
+                  <p>Đang nạp các thư mục phát...</p>
+                </div>
               )}
 
               {!loadingPlaylists && playlists.length === 0 && (
                 <div className={styles.noPlaylists}>
                   <FolderHeart size={44} className={styles.emptyIcon} />
                   <p>Chưa có danh sách phát cá nhân nào.</p>
-                  <button onClick={() => setShowModal(true)} className={styles.createBtnBig}>Tạo Playlist Ngay</button>
+                  <button onClick={() => setShowModal(true)} className={styles.createBtnBig}>Tạo Ngay</button>
                 </div>
               )}
 
@@ -230,11 +234,11 @@ const PlaylistsPage = () => {
                         onClick={() => setActivePlaylist(pl)}
                       >
                         <div className={styles.playlistThumb}>
-                          <ListMusic size={20} />
+                          <ListMusic size={18} />
                         </div>
                         <div className={styles.playlistMeta}>
                           <h4 className={styles.plName}>{pl.name}</h4>
-                          <p className={styles.plDesc}>{pl.description || "Danh sách phát tùy chỉnh"}</p>
+                          <p className={styles.plDesc}>{pl.description || "Danh sách phát của tôi"}</p>
                         </div>
                         {isSelected && <div className={styles.activeIndicator} />}
                       </div>
@@ -244,57 +248,58 @@ const PlaylistsPage = () => {
               )}
             </div>
 
-            {/* RIGHT COLUMN: Active playlist details & songs */}
+            {/* RIGHT COLUMN: Active Playlist Tracks List */}
             <div className={styles.rightCol}>
               {!activePlaylist ? (
                 <div className={styles.noActivePlaylist}>
-                  <Sparkles size={64} className={styles.welcomeSparkle} />
-                  <h3>Không gian lưu trữ cá nhân</h3>
-                  <p>Chọn một danh sách phát ở cột bên trái hoặc tạo danh sách phát mới để xem bài hát</p>
+                  <Sparkles size={56} className={styles.welcomeSparkle} />
+                  <h3>Không gian âm nhạc cá nhân</h3>
+                  <p>Vui lòng chọn danh sách phát bên cột trái hoặc tạo mới để thiết lập danh sách bài hát của riêng bạn.</p>
                 </div>
               ) : (
                 <div className={styles.activePlaylistContainer}>
-                  {/* Playlist Banner Header */}
+                  
+                  {/* Banner header for active playlist */}
                   <div className={styles.playlistBanner}>
                     <div className={styles.bannerArt}>
-                      <FolderHeart size={64} color="#a78bfa" />
+                      <FolderHeart size={48} color="var(--accent-primary)" />
                     </div>
                     <div className={styles.bannerDetails}>
-                      <span className={styles.bannerLabel}>PLAYLIST CÁ NHÂN</span>
+                      <span className={styles.bannerLabel}>DANH SÁCH CÁ NHÂN</span>
                       <h1 className={styles.bannerTitle}>{activePlaylist.name}</h1>
-                      <p className={styles.bannerDesc}>{activePlaylist.description || "Không có mô tả chi tiết cho danh sách phát này."}</p>
+                      <p className={styles.bannerDesc}>{activePlaylist.description || "Danh sách phát cá nhân của bạn trên VioTune Cloud."}</p>
                       <div className={styles.bannerStats}>
-                        <span className={styles.statItem}>Người tạo: <strong>{username}</strong></span>
-                        <span className={styles.statDivider}>•</span>
-                        <span className={styles.statItem}>{playlistSongs.length} bài hát</span>
+                        <span>Người lập: <strong>{username}</strong></span>
+                        <span style={{ margin: '0 8px' }}>•</span>
+                        <span>{playlistSongs.length} bài hát</span>
                       </div>
                     </div>
                     {playlistSongs.length > 0 && (
                       <button className={styles.playAllBigBtn} onClick={handlePlayAll}>
-                        <Play size={22} fill="white" /> Phát tất cả
+                        <Play size={18} fill="white" /> Phát toàn bộ
                       </button>
                     )}
                   </div>
 
-                  {/* Songs list */}
+                  {/* Songs list table display */}
                   <div className={styles.tracksSection}>
                     {loadingSongs ? (
-                      <div className={styles.tracksLoader}>Đang nạp danh sách bài hát...</div>
+                      <div className={styles.emptyTracks}>Đang đồng bộ danh sách nhạc...</div>
                     ) : playlistSongs.length === 0 ? (
                       <div className={styles.emptyTracks}>
-                        <Music size={48} className={styles.emptyTracksIcon} />
-                        <h4>Playlist này chưa có nhạc</h4>
-                        <p>Hãy vào trang Tìm Kiếm hoặc xem các gợi ý bài hát ở Trang Chủ để thêm nhạc vào đây</p>
-                        <button onClick={() => navigate('/search')} className={styles.searchRedirectBtn}>Khám phá bài hát</button>
+                        <Music size={44} className={styles.emptyTracksIcon} />
+                        <h4>Chưa có ca khúc nào trong danh sách phát</h4>
+                        <p>Hãy khám phá thêm bài hát ở trang Tìm Kiếm hoặc gợi ý trang chủ để thêm nhạc vào đây.</p>
+                        <button onClick={() => navigate('/search')} className={styles.searchRedirectBtn}>Khám phá ngay</button>
                       </div>
                     ) : (
                       <div className={styles.songsTable}>
                         <div className={styles.tableHeaderRow}>
                           <span className={styles.colIndex}>#</span>
-                          <span className={styles.colTitleHeader}>TIÊU ĐỀ</span>
-                          <span className={styles.colGenreHeader}>THỂ LOẠI</span>
-                          <span className={styles.colDateHeader}>NGÀY THÊM</span>
-                          <span className={styles.colActionHeader}></span>
+                          <span>TÊN BÀI HÁT</span>
+                          <span>THỂ LOẠI</span>
+                          <span>THỜI GIAN THÊM</span>
+                          <span className={styles.colAction}></span>
                         </div>
                         
                         <div className={styles.tableBody}>
@@ -311,7 +316,7 @@ const PlaylistsPage = () => {
                                 }}
                               >
                                 <span className={styles.colIndex}>
-                                  {isCurrent ? <Play size={14} fill="#a78bfa" color="#a78bfa" /> : idx + 1}
+                                  {isCurrent ? <Play size={12} fill="var(--accent-primary)" color="var(--accent-primary)" /> : idx + 1}
                                 </span>
                                 <div className={styles.colTitleArea}>
                                   <img src={cover} alt={song.track_name} className={styles.songCover} />
@@ -328,19 +333,19 @@ const PlaylistsPage = () => {
                                     </p>
                                   </div>
                                 </div>
-                                <span className={styles.colGenre}>
+                                <div className={styles.colGenre}>
                                   {song.track_genre && <span className={styles.genreBadge}>{song.track_genre}</span>}
-                                </span>
-                                <span className={styles.colDate}>
-                                  <Calendar size={14} style={{ marginRight: '6px' }} /> {formatDate(song.added_at)}
-                                </span>
-                                <div className={styles.colAction}>
+                                </div>
+                                <div className={styles.colDate}>
+                                  <Calendar size={12} style={{ marginRight: '6px' }} /> {formatDate(song.added_at)}
+                                </div>
+                                <div className={styles.colAction} onClick={(e) => e.stopPropagation()}>
                                   <button 
                                     className={styles.deleteSongBtn}
                                     onClick={(e) => handleRemoveSong(e, song.track_id)}
-                                    title="Xóa bài hát khỏi playlist"
+                                    title="Xóa bài hát"
                                   >
-                                    <Trash2 size={16} />
+                                    <Trash2 size={14} />
                                   </button>
                                 </div>
                               </div>
@@ -358,47 +363,47 @@ const PlaylistsPage = () => {
         </div>
       </div>
 
-      {/* CREATE PLAYLIST MODAL */}
+      {/* CREATE PLAYLIST MODAL DIALOG */}
       {showModal && (
         <div className={styles.modalOverlay} onClick={() => setShowModal(false)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>Tạo danh sách phát mới</h3>
+              <h3>Tạo Thư Mục Phát Mới</h3>
               <button className={styles.closeModalBtn} onClick={() => setShowModal(false)}>×</button>
             </div>
             <form onSubmit={handleCreatePlaylist} className={styles.modalForm}>
               <div className={styles.inputGroup}>
-                <label>Tên Playlist</label>
+                <label>Tên Thư Mục Phát</label>
                 <input 
                   type="text" 
-                  placeholder="Ví dụ: Lofi Chill, Nhạc tập trung..."
+                  placeholder="Ví dụ: Nhạc tập trung, Lofi Chill tối thứ 7..."
                   value={playlistName}
                   onChange={(e) => setPlaylistName(e.target.value)}
-                  maxLength={40}
+                  maxLength={30}
                   required
                   autoFocus
                 />
               </div>
               <div className={styles.inputGroup}>
-                <label>Mô tả ngắn</label>
+                <label>Mô tả chi tiết</label>
                 <textarea 
-                  placeholder="Viết vài dòng mô tả về danh sách phát này..."
+                  placeholder="Viết vài dòng mô tả ngắn về danh sách phát này..."
                   value={playlistDesc}
                   onChange={(e) => setPlaylistDesc(e.target.value)}
-                  maxLength={150}
+                  maxLength={100}
                   rows={3}
                 />
               </div>
 
               {modalError && (
                 <div className={styles.errorMsg}>
-                  <AlertCircle size={16} /> {modalError}
+                  <AlertCircle size={14} /> {modalError}
                 </div>
               )}
 
               <div className={styles.modalActions}>
                 <button type="button" className={styles.cancelBtn} onClick={() => setShowModal(false)}>Hủy</button>
-                <button type="submit" className={styles.submitBtn}>Tạo Playlist</button>
+                <button type="submit" className={styles.submitBtn}>Tạo Danh Sách</button>
               </div>
             </form>
           </div>

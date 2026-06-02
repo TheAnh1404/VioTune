@@ -36,16 +36,16 @@ const formatTime = (seconds) => {
   return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-// Simulated Lyrics for a high-end feel!
+// Simulated Lyrics for a high-end feel
 const getSimulatedLyrics = (songTitle, artistName) => {
   return [
     { time: 0, text: `🎵 Đang phát: ${songTitle} - ${artistName} 🎵` },
-    { time: 3, text: "Giai điệu vang lên trong đêm thanh vắng..." },
-    { time: 8, text: "Từng nốt nhạc đưa ta về miền ký ức xa xôi" },
-    { time: 13, text: "Nơi ánh trăng chiếu rọi con đường cũ" },
-    { time: 18, text: "Và tiếng cười ấm áp của ngày hôm qua vẫn còn đây" },
-    { time: 23, text: "Dù thời gian có trôi nhanh như gió thoảng" },
-    { time: 27, text: "Tình yêu âm nhạc trong ta vẫn vẹn nguyên" },
+    { time: 3, text: "Giai điệu vang lên giữa không gian mờ ảo..." },
+    { time: 8, text: "Từng nốt nhạc đưa ta về những miền xúc cảm xa xôi" },
+    { time: 13, text: "Nơi ánh trăng dịu dàng dẫn lối tâm hồn" },
+    { time: 18, text: "Và tiếng cười ấm áp của ngày xưa như vẫn còn vẹn nguyên" },
+    { time: 23, text: "Dù thời gian có trôi nhanh như những cơn gió thoảng" },
+    { time: 27, text: "Tình yêu âm nhạc trong ta vẫn sẽ luôn cháy bỏng" },
     { time: 30, text: "Cảm ơn bạn đã lựa chọn VioTune ❤️" }
   ];
 };
@@ -61,15 +61,14 @@ const PlayerPage = () => {
     setCurrentIndex, setCurrentSong
   } = usePlayback();
 
-  const [activeTab, setActiveTab] = useState('upnext'); // 'upnext' | 'lyrics' | 'info' | 'similar'
-  // Uses global hoisted Likes state from AuthContext
+  const [activeTab, setActiveTab] = useState('upnext'); // 'upnext' | 'similar' | 'lyrics' | 'info'
   const [prevVolume, setPrevVolume] = useState(0.8);
   const lyricsContainerRef = useRef(null);
   
   const [similarSongs, setSimilarSongs] = useState([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
 
-  // Fetch similar songs whenever currentSong changes (Content-Based AI suggestions)
+  // Fetch similar songs whenever currentSong changes (Content-Based AI KNN suggestions)
   useEffect(() => {
     const fetchSimilar = async () => {
       if (!currentSong || !currentSong.track_id) return;
@@ -95,19 +94,17 @@ const PlayerPage = () => {
 
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
   const songTitle = currentSong ? currentSong.track_name : "Không có bài hát";
-  const songArtist = currentSong ? currentSong.artists : "Chọn một bài hát để bắt đầu";
+  const songArtist = currentSong ? currentSong.artists : "Vui lòng chọn bài hát";
   const coverUrl = currentSong?.cover_url || (currentSong ? getCoverImage(currentSong.track_id) : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500");
 
-  // Lyrics calculation
+  // Lyrics autoscrolling calculations
   const lyrics = currentSong ? getSimulatedLyrics(songTitle, songArtist) : [];
   const currentLyricIndex = lyrics.findIndex((l, index) => {
     const nextL = lyrics[index + 1];
     return currentTime >= l.time && (!nextL || currentTime < nextL.time);
   });
 
-  // Handled by AuthContext lifecycle
-
-  // Autoscroll lyrics
+  // Autoscroll lyrics container
   useEffect(() => {
     if (lyricsContainerRef.current && currentLyricIndex !== -1) {
       const activeEl = lyricsContainerRef.current.children[currentLyricIndex];
@@ -172,7 +169,8 @@ const PlayerPage = () => {
 
   return (
     <div className={styles.playerPageContainer}>
-      {/* Blurred Ambient Glow Background (YouTube Music Ambient Style) */}
+      
+      {/* Blurred Ambient Glow Background */}
       <div 
         className={styles.ambientGlow} 
         style={{ backgroundImage: `url(${coverUrl})` }}
@@ -185,10 +183,11 @@ const PlayerPage = () => {
       />
 
       <div className={styles.mainWrapper}>
-        {/* Left Side: Disc Art & Primary Controls */}
+        
+        {/* LEFT COLUMN: Spinning disc art & timeline controller */}
         <div className={styles.playerMainArea}>
           <button className={styles.backBtn} onClick={() => navigate(-1)}>
-            <ChevronLeft size={20} /> Quay lại trang trước
+            <ChevronLeft size={16} /> Quay lại trang cũ
           </button>
 
           <div className={styles.discSection}>
@@ -199,13 +198,13 @@ const PlayerPage = () => {
 
             <div className={styles.songMetadata}>
               <div className={styles.titleRow}>
-                <h1 className={styles.songTitleText}>{songTitle}</h1>
+                <h1 className={styles.songTitleText} title={songTitle}>{songTitle}</h1>
                 <button 
                   className={`${styles.likeBtn} ${likedSongIds.has(currentSong?.track_id) ? styles.liked : ''}`}
                   onClick={handleLike}
                   disabled={!currentSong}
                 >
-                  <Heart size={26} fill={likedSongIds.has(currentSong?.track_id) ? "#ef4444" : "transparent"} />
+                  <Heart size={22} fill={likedSongIds.has(currentSong?.track_id) ? "var(--accent-danger)" : "transparent"} />
                 </button>
               </div>
               <p className={styles.songArtistText}>{songArtist}</p>
@@ -215,7 +214,7 @@ const PlayerPage = () => {
             </div>
           </div>
 
-          {/* Progress Section */}
+          {/* Progress Timeline Slider */}
           <div className={styles.progressContainer}>
             <div className={styles.progressBar} onClick={handleProgressClick}>
               <div className={styles.progressFill} style={{ width: `${progressPercent}%` }} />
@@ -227,52 +226,51 @@ const PlayerPage = () => {
             </div>
           </div>
 
-          {/* Audio Controls */}
+          {/* Audio Playback Controls */}
           <div className={styles.controlButtons}>
             <button 
               className={`${styles.utilityBtn} ${isShuffle ? styles.activeUtility : ''}`}
               onClick={toggleShuffle}
-              title="Trộn bài"
+              title="Phát ngẫu nhiên"
             >
-              <Shuffle size={22} />
+              <Shuffle size={20} />
             </button>
             
             <button className={styles.playbackBtn} onClick={prevSong} disabled={queue.length === 0} title="Bài trước">
-              <SkipBack size={28} fill="currentColor" />
+              <SkipBack size={24} fill="currentColor" />
             </button>
 
             <button 
               className={styles.playPauseBigBtn} 
               onClick={togglePlay}
               disabled={previewLoading || !currentSong}
-              style={{ cursor: previewLoading ? 'wait' : 'pointer' }}
             >
               {previewLoading ? (
                 <span className={styles.spinner}>⟳</span>
               ) : isPlaying ? (
-                <Pause size={36} fill="currentColor" />
+                <Pause size={28} fill="currentColor" />
               ) : (
-                <Play size={36} fill="currentColor" style={{ marginLeft: '6px' }} />
+                <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />
               )}
             </button>
 
             <button className={styles.playbackBtn} onClick={nextSong} disabled={queue.length === 0} title="Bài tiếp theo">
-              <SkipForward size={28} fill="currentColor" />
+              <SkipForward size={24} fill="currentColor" />
             </button>
 
             <button 
               className={`${styles.utilityBtn} ${repeatMode !== 'off' ? styles.activeUtility : ''}`}
               onClick={toggleRepeat}
-              title={`Chế độ lặp: ${repeatMode}`}
+              title={`Lặp lại: ${repeatMode}`}
             >
-              <Repeat size={22} />
+              <Repeat size={20} />
             </button>
           </div>
 
-          {/* Volume control */}
+          {/* Volume control slider */}
           <div className={styles.volumeController}>
             <button className={styles.volumeIconBtn} onClick={handleMuteToggle}>
-              {volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
             </button>
             <div className={styles.volumeBar} onClick={handleVolumeClick}>
               <div className={styles.volumeFill} style={{ width: `${volume * 100}%` }} />
@@ -280,7 +278,7 @@ const PlayerPage = () => {
           </div>
         </div>
 
-        {/* Right Side: Tabbed Sidebar (Up Next / Lyrics / Info) */}
+        {/* RIGHT COLUMN: Tabbed Sidebar */}
         <div className={styles.tabPanelArea}>
           <div className={styles.tabHeader}>
             <button 
@@ -292,15 +290,14 @@ const PlayerPage = () => {
             <button 
               className={`${styles.tabBtn} ${activeTab === 'similar' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('similar')}
-              style={{ color: activeTab === 'similar' ? '#c084fc' : '#94a3b8' }}
             >
-              <Sparkles size={16} style={{ color: activeTab === 'similar' ? '#c084fc' : '#94a3b8' }} /> Gợi ý AI
+              <Sparkles size={16} /> Gợi ý AI
             </button>
             <button 
               className={`${styles.tabBtn} ${activeTab === 'lyrics' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('lyrics')}
             >
-              <AlignLeft size={16} /> Lời bài hát
+              <AlignLeft size={16} /> Lời nhạc
             </button>
             <button 
               className={`${styles.tabBtn} ${activeTab === 'info' ? styles.activeTab : ''}`}
@@ -311,13 +308,15 @@ const PlayerPage = () => {
           </div>
 
           <div className={styles.tabContent}>
+            
+            {/* TAB 1: Queue list waiting */}
             {activeTab === 'upnext' && (
               <div className={styles.queueWrapper}>
                 {queue.length === 0 ? (
                   <div className={styles.emptyQueue}>
-                    <Disc size={48} className={styles.emptyIcon} />
-                    <p>Hàng chờ trống</p>
-                    <span onClick={() => navigate('/home')}>Quay lại chọn nhạc</span>
+                    <Disc size={44} className={styles.emptyIcon} />
+                    <p>Hàng chờ rỗng</p>
+                    <span onClick={() => navigate('/home')}>Quay lại Trang Chủ để chọn nhạc</span>
                   </div>
                 ) : (
                   <div className={styles.queueList}>
@@ -353,36 +352,15 @@ const PlayerPage = () => {
               </div>
             )}
 
-            {activeTab === 'lyrics' && (
-              <div className={styles.lyricsWrapper}>
-                {!currentSong ? (
-                  <p className={styles.noLyricsText}>Chưa chọn bài hát để hiển thị lời</p>
-                ) : (
-                  <div className={styles.lyricsScrollList} ref={lyricsContainerRef}>
-                    {lyrics.map((line, index) => {
-                      const isActive = index === currentLyricIndex;
-                      return (
-                        <p 
-                          key={index} 
-                          className={`${styles.lyricLine} ${isActive ? styles.activeLyricLine : ''}`}
-                        >
-                          {line.text}
-                        </p>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
+            {/* TAB 2: AI Suggestions similar lists */}
             {activeTab === 'similar' && (
               <div className={styles.similarWrapper}>
                 {!currentSong ? (
-                  <p className={styles.noInfoText}>Chọn một bài hát để xem gợi ý</p>
+                  <p className={styles.noInfoText}>Vui lòng chọn bài hát để nạp gợi ý</p>
                 ) : loadingSimilar ? (
                   <div className={styles.similarList}>
                     <div className={styles.similarBanner}>
-                      🪄 Đang chạy thuật toán Content-Based KNN để tìm bài hát tương đồng...
+                      🪄 Đang kích hoạt thuật toán Content KNN để đề xuất bài tương đồng...
                     </div>
                     {Array.from({ length: 6 }).map((_, idx) => (
                       <div key={idx} className={styles.skeletonItem}>
@@ -404,27 +382,25 @@ const PlayerPage = () => {
                     ))}
                   </div>
                 ) : similarSongs.length === 0 ? (
-                  <p className={styles.noInfoText}>Không tìm thấy bài hát tương đồng</p>
+                  <p className={styles.noInfoText}>Không tìm thấy bài hát nào tương tự</p>
                 ) : (
                   <div className={styles.similarList}>
                     <div className={styles.similarBanner}>
-                      🪄 Gợi ý bài hát tương đồng dựa trên thuật toán Content-Based (KNN)
+                      🪄 Gợi ý thông minh dựa trên đặc trưng sóng âm (KNN Cosine)
                     </div>
                     {similarSongs.map((song, idx) => {
                       const isSongLiked = likedSongIds.has(song.track_id);
                       return (
                         <div 
                           key={song.track_id + '-' + idx} 
-                          className={styles.similarItem}
-                          onClick={() => {
-                            playSong(song, similarSongs);
-                          }}
+                          className={`${styles.similarItem} glass-panel`}
+                          onClick={() => playSong(song, similarSongs)}
                         >
                           <span className={styles.similarIndex}>{idx + 1}</span>
                           <img src={song.cover_url || getCoverImage(song.track_id)} alt={song.track_name} className={styles.similarThumb} />
                           <div className={styles.similarInfo}>
                             <h4 className={styles.similarTitle}>{song.track_name}</h4>
-                            <p className={styles.similarArtist}>{song.artists} • <span style={{ color: '#06b6d4' }}>{song.track_genre}</span></p>
+                            <p className={styles.similarArtist}>{song.artists} • <span style={{ color: 'var(--accent-secondary)' }}>{song.track_genre}</span></p>
                           </div>
                           <button 
                             className={`${styles.similarLikeBtn} ${isSongLiked ? styles.liked : ''}`}
@@ -437,7 +413,7 @@ const PlayerPage = () => {
                               }
                             }}
                           >
-                            <Heart size={14} fill={isSongLiked ? '#ef4444' : 'none'} />
+                            <Heart size={14} fill={isSongLiked ? 'var(--accent-danger)' : 'none'} />
                           </button>
                         </div>
                       );
@@ -446,42 +422,67 @@ const PlayerPage = () => {
                 )}
               </div>
             )}
- 
-             {activeTab === 'info' && (
+
+            {/* TAB 3: Autoscrolling lyrics simulated view */}
+            {activeTab === 'lyrics' && (
+              <div className={styles.lyricsWrapper}>
+                {!currentSong ? (
+                  <p className={styles.noLyricsText}>Vui lòng chọn bài hát để xem lời nhạc</p>
+                ) : (
+                  <div className={styles.lyricsScrollList} ref={lyricsContainerRef}>
+                    {lyrics.map((line, index) => {
+                      const isActive = index === currentLyricIndex;
+                      return (
+                        <p 
+                          key={index} 
+                          className={`${styles.lyricLine} ${isActive ? styles.activeLyricLine : ''}`}
+                        >
+                          {line.text}
+                        </p>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 4: Metadata details view */}
+            {activeTab === 'info' && (
               <div className={styles.infoWrapper}>
                 {!currentSong ? (
-                  <p className={styles.noInfoText}>Không có thông tin bài hát</p>
+                  <p className={styles.noInfoText}>Không tìm thấy siêu dữ liệu cho ca khúc này</p>
                 ) : (
                   <div className={styles.infoDetails}>
                     <div className={styles.infoRow}>
                       <Award className={styles.infoRowIcon} size={18} />
                       <div>
-                        <h5>Bài hát</h5>
+                        <h5>Tác Phẩm</h5>
                         <p>{currentSong.track_name}</p>
                       </div>
                     </div>
                     <div className={styles.infoRow}>
                       <Disc className={styles.infoRowIcon} size={18} />
                       <div>
-                        <h5>Nghệ sĩ</h5>
+                        <h5>Nghệ Sĩ</h5>
                         <p>{currentSong.artists}</p>
                       </div>
                     </div>
                     <div className={styles.infoRow}>
                       <Info className={styles.infoRowIcon} size={18} />
                       <div>
-                        <h5>Thể loại</h5>
-                        <p>{currentSong.track_genre || "Không rõ"}</p>
+                        <h5>Thể Loại</h5>
+                        <p>{currentSong.track_genre || "Pop Lofi Core"}</p>
                       </div>
                     </div>
                     <div className={styles.infoCard}>
-                      <h4>Trình phát VioTune Premium</h4>
-                      <p>Nhạc chất lượng cao được liên kết trực tiếp với dữ liệu đám mây Firestore, proxy Deezer API 30s.</p>
+                      <h4>Hệ thống phát nhạc cao cấp VioTune</h4>
+                      <p>Khám phá nhạc số chất lượng cao được lưu trữ đám mây tại Google Firebase Firestore REST API.</p>
                     </div>
                   </div>
                 )}
               </div>
             )}
+
           </div>
         </div>
       </div>

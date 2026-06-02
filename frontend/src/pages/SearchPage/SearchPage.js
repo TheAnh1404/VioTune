@@ -6,7 +6,7 @@ import SideBarMenu from '../../components/SideBarMenu/SideBarMenu';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
 import styles from './SearchPage.module.css';
-import { Play, Heart, Search, Music } from 'lucide-react';
+import { Play, Heart, Search, Music, Sparkles } from 'lucide-react';
 import { API_URL } from '../../config';
 
 const getCoverImage = (trackId) => {
@@ -38,9 +38,8 @@ const SearchPage = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  // Global hoisted likes state from AuthContext replaces local states
 
-  // Search API Call (race-safe: AbortController cancels in-flight requests on new keystrokes)
+  // Search API Call with abort controller and debounce
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
@@ -79,7 +78,7 @@ const SearchPage = () => {
 
   const handlePlay = (song) => {
     playSong(song, results);
-    navigate('/player'); // Redirect to premium Player page on song select!
+    navigate('/player'); // Redirect to high fidelity cinema Player page
   };
 
   const handleLike = async (e, song) => {
@@ -109,7 +108,7 @@ const SearchPage = () => {
         onSearchChange={setQuery}
         username={username}
         onLogOut={handleLogOut}
-        showSearch={true} // Show beautiful search box on header for search page!
+        showSearch={true} // Display top bar input too
       />
       <div className={styles.contentWrapper}>
         <SideBarMenu 
@@ -124,15 +123,15 @@ const SearchPage = () => {
         />
         <div className={styles.mainContent}>
           <div className={styles.searchHeaderSection}>
-            <h1 className={styles.title}>Tìm kiếm bài hát</h1>
-            <p className={styles.subtitle}>Khám phá hàng triệu bài hát và nghệ sĩ yêu thích trên VioTune</p>
+            <h1 className={styles.title}>Tìm Kiếm Bài Hát</h1>
+            <p className={styles.subtitle}>Giải mã giai điệu bạn yêu thích với công cụ lọc thông minh VioTune Core</p>
             
-            {/* Big beautiful search input at center */}
+            {/* Super premium large glowing search field */}
             <div className={styles.bigSearchBox}>
-              <Search className={styles.searchIconBig} size={24} />
+              <Search className={styles.searchIconBig} size={22} />
               <input 
                 type="text"
-                placeholder="Tên bài hát, nghệ sĩ hoặc thể loại..."
+                placeholder="Nhập tên bài hát, ca sĩ, thể loại hoặc từ khóa..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className={styles.bigSearchInput}
@@ -144,9 +143,9 @@ const SearchPage = () => {
           <div className={styles.resultsSection}>
             {loading && (
               <div className={styles.resultsGridWrapper}>
-                <h2 className={styles.sectionTitle}>Đang tải kết quả...</h2>
+                <h2 className={styles.sectionTitle}>Đang giải mã kết quả tìm kiếm...</h2>
                 <div className={styles.resultsGrid}>
-                  {Array.from({ length: 6 }).map((_, idx) => (
+                  {Array.from({ length: 12 }).map((_, idx) => (
                     <div key={idx} className={styles.skeletonCard}>
                       <div className={styles.skeletonImage}>
                         <div className={styles.shimmer}></div>
@@ -169,22 +168,22 @@ const SearchPage = () => {
             {!loading && query && results.length === 0 && (
               <div className={styles.noResults}>
                 <Music size={48} className={styles.noResultsIcon} />
-                <h3>Không tìm thấy kết quả nào cho "{query}"</h3>
-                <p>Hãy thử từ khóa khác hoặc kiểm tra lại chính tả</p>
+                <h3>Không tìm thấy giai điệu tương ứng</h3>
+                <p>Hãy thử tìm kiếm theo nghệ sĩ khác hoặc kiểm tra lại từ khóa.</p>
               </div>
             )}
 
             {!query && (
               <div className={styles.searchPlaceholder}>
-                <Search size={64} className={styles.placeholderIcon} />
-                <h3>Bắt đầu tìm kiếm giai điệu của bạn</h3>
-                <p>Nhập từ khóa tìm kiếm để khám phá thế giới âm nhạc VioTune</p>
+                <Sparkles size={56} className={styles.placeholderIcon} />
+                <h3>Sẵn Sàng Khám Phá Giai Điệu Mới</h3>
+                <p>Nhập từ khóa tìm kiếm phía trên để khai phá kho tàng âm nhạc VioTune</p>
               </div>
             )}
 
             {results.length > 0 && (
               <div className={styles.resultsGridWrapper}>
-                <h2 className={styles.sectionTitle}>Kết quả tìm kiếm ({results.length})</h2>
+                <h2 className={styles.sectionTitle}>Kết quả tìm thấy ({results.length})</h2>
                 <div className={styles.resultsGrid}>
                   {results.map((song) => {
                     const isLiked = likedSongIds.has(song.track_id);
@@ -192,13 +191,13 @@ const SearchPage = () => {
                     return (
                       <div 
                         key={song.track_id} 
-                        className={styles.songCard}
+                        className={`${styles.songCard} glass-panel`}
                         onClick={() => handlePlay(song)}
                       >
                         <div className={styles.imageWrapper}>
                           <img src={cover} alt={song.track_name} className={styles.songCover} />
                           <div className={styles.playOverlay}>
-                            <Play size={24} fill="white" className={styles.playIcon} />
+                            <Play size={26} fill="white" className={styles.playIcon} />
                           </div>
                         </div>
                         <div className={styles.songInfoArea}>
@@ -210,7 +209,7 @@ const SearchPage = () => {
                           className={`${styles.likeBtn} ${isLiked ? styles.liked : ''}`}
                           onClick={(e) => handleLike(e, song)}
                         >
-                          <Heart size={18} fill={isLiked ? "#ef4444" : "transparent"} />
+                          <Heart size={16} fill={isLiked ? "var(--accent-danger)" : "transparent"} />
                         </button>
                       </div>
                     );

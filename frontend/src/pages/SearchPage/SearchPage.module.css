@@ -1,257 +1,215 @@
+/* ─── VioTune Premium SearchPage Styling System (Glassmorphism Core) ─── */
+
 .searchPageContainer {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background-color: #0b0f24;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-primary);
   overflow: hidden;
+  position: relative;
+}
+
+/* Background Glowing Ambient Spheres */
+.searchPageContainer::before {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  top: -100px;
+  right: -100px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.searchPageContainer::after {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  bottom: -100px;
+  left: -100px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .contentWrapper {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .mainContent {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 0 24px 24px 24px;
+  padding: 24px;
   overflow-y: auto;
-  color: white;
-  gap: 40px;
+  gap: 32px;
 }
 
-/* Custom Scrollbar */
+/* Scrollbar customization */
 .mainContent::-webkit-scrollbar {
   width: 6px;
 }
+
 .mainContent::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
-}
-.mainContent::-webkit-scrollbar-thumb {
-  background: #4a5568;
-  border-radius: 6px;
+  background: transparent;
 }
 
-/* Search Header Section */
+.mainContent::-webkit-scrollbar-thumb {
+  background: var(--glass-highlight);
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+}
+
+.mainContent::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
 .searchHeaderSection {
   text-align: center;
-  padding: 40px 20px 20px 20px;
-  max-width: 800px;
-  margin: 0 auto;
-  width: 100%;
+  max-width: 720px;
+  margin: 40px auto 20px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .title {
+  font-family: var(--font-display);
   font-size: 36px;
   font-weight: 800;
-  background: linear-gradient(135deg, #a78bfa 0%, #3b82f6 100%);
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #f8fafc 30%, #94a3b8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 12px;
-  letter-spacing: -0.5px;
 }
 
 .subtitle {
-  font-size: 16px;
-  color: #7b8baa;
-  margin-bottom: 32px;
+  color: var(--text-secondary);
+  font-size: 15px;
 }
 
-/* Big Search Box */
+/* Glowing central search input */
 .bigSearchBox {
+  position: relative;
   display: flex;
   align-items: center;
-  background: rgba(26, 38, 74, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 16px 24px;
+  margin-top: 16px;
   width: 100%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.bigSearchBox:focus-within {
-  border-color: rgba(139, 92, 246, 0.5);
-  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-  background: rgba(26, 38, 74, 0.75);
 }
 
 .searchIconBig {
-  color: #7b8baa;
-  margin-right: 18px;
+  position: absolute;
+  left: 20px;
+  color: var(--text-muted);
   transition: color 0.3s;
 }
 
-.bigSearchBox:focus-within .searchIconBig {
-  color: #a78bfa;
-}
-
 .bigSearchInput {
-  background: transparent;
-  border: none;
+  width: 100%;
+  padding: 16px 20px 16px 56px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-size: 16px;
   outline: none;
-  color: #fff;
-  width: 100%;
-  font-size: 18px;
-  font-weight: 500;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.bigSearchInput::placeholder {
-  color: #5a6b8c;
+.bigSearchInput:focus {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--accent-secondary);
+  box-shadow: var(--neon-glow-secondary);
 }
 
-/* Results Section */
+.bigSearchInput:focus + .searchIconBig {
+  color: var(--accent-secondary);
+}
+
+/* Results section */
 .resultsSection {
-  flex: 1;
   max-width: 1200px;
-  margin: 0 auto;
   width: 100%;
-  padding: 0 10px;
+  margin: 0 auto;
+  min-height: 300px;
 }
 
-/* Spinner Loader */
-.loaderContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 0;
-  color: #7b8baa;
-}
-
-.spinner {
-  width: 44px;
-  height: 44px;
-  border: 4px solid rgba(139, 92, 246, 0.1);
-  border-top: 4px solid #a78bfa;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Placeholders */
-.noResults, .searchPlaceholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 80px 20px;
-  border: 1px dashed rgba(255, 255, 255, 0.05);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.01);
-}
-
-.noResultsIcon, .placeholderIcon {
-  color: #3b82f6;
-  opacity: 0.4;
-  margin-bottom: 20px;
-}
-
-.noResults h3, .searchPlaceholder h3 {
+.sectionTitle {
+  font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
-  color: #fff;
-  margin-bottom: 8px;
-}
-
-.noResults p, .searchPlaceholder p {
-  font-size: 14px;
-  color: #7b8baa;
-}
-
-/* Results Grid */
-.sectionTitle {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 24px;
-  color: #fff;
-  position: relative;
-  display: inline-block;
-}
-
-.sectionTitle::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 0;
-  width: 40px;
-  height: 3px;
-  background: #a78bfa;
-  border-radius: 2px;
+  margin-bottom: 20px;
+  color: var(--text-primary);
 }
 
 .resultsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
 }
 
-/* Song Card */
+/* Song card styles */
 .songCard {
-  background: linear-gradient(180deg, #16223f 0%, #0f182e 100%);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
   padding: 16px;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
 }
 
 .songCard:hover {
-  transform: translateY(-6px);
-  border-color: rgba(139, 92, 246, 0.25);
-  box-shadow: 0 12px 30px rgba(139, 92, 246, 0.1);
-  background: linear-gradient(180deg, #1d2c55 0%, #111b33 100%);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .imageWrapper {
   position: relative;
   width: 100%;
-  padding-top: 100%; /* 1:1 Aspect Ratio */
+  aspect-ratio: 1;
   border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 14px;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .songCover {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .songCard:hover .songCover {
-  transform: scale(1.08);
+  transform: scale(1.06);
 }
 
 .playOverlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.3s ease;
-  backdrop-filter: blur(2px);
+  transition: opacity 0.3s;
 }
 
 .songCard:hover .playOverlay {
@@ -259,159 +217,114 @@
 }
 
 .playIcon {
+  color: white;
+  width: 32px;
+  height: 32px;
   transform: scale(0.8);
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .songCard:hover .playIcon {
-  transform: scale(1.1);
+  transform: scale(1);
 }
 
 .songInfoArea {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
 .songTitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
-  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .songArtist {
-  font-size: 13px;
-  color: #7b8baa;
-  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 8px;
 }
 
 .genreBadge {
+  align-self: flex-start;
   font-size: 10px;
-  font-weight: 700;
-  color: #c4b5fd;
-  background: rgba(139, 92, 246, 0.15);
+  font-weight: 600;
+  color: var(--accent-secondary);
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.15);
   padding: 2px 8px;
   border-radius: 12px;
-  align-self: flex-start;
-  margin-top: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-/* Like button */
+/* Floating Like Button inside Card */
 .likeBtn {
   position: absolute;
   bottom: 16px;
   right: 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  color: #7b8baa;
+  padding: 6px;
+  border-radius: 50%;
   transition: all 0.2s;
-  backdrop-filter: blur(4px);
+  z-index: 2;
 }
 
 .likeBtn:hover {
+  color: var(--accent-danger);
   transform: scale(1.1);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.2);
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.05);
 }
 
-.likeBtn.liked {
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.15);
+.liked {
+  color: var(--accent-danger) !important;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .title {
-    font-size: 28px;
-  }
-  .bigSearchBox {
-    padding: 12px 18px;
-  }
-  .bigSearchInput {
-    font-size: 16px;
-  }
-  .resultsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 16px;
-  }
-  .songCard {
-    padding: 12px;
-  }
-  .songTitle {
-    font-size: 14px;
-  }
-  .songArtist {
-    font-size: 12px;
-  }
-}
-
-/* Skeleton Loader Card styles */
+/* Skeleton placeholder loader styles */
 .skeletonCard {
-  background: linear-gradient(180deg, #16223f 0%, #0f182e 100%);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 16px;
   padding: 16px;
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow: hidden;
+  height: 250px;
 }
 
 .skeletonImage {
   width: 100%;
-  padding-top: 100%; /* 1:1 Aspect Ratio */
+  aspect-ratio: 1;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
   position: relative;
   overflow: hidden;
 }
 
-.skeletonTitle {
-  height: 16px;
-  width: 80%;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 4px;
-  position: relative;
-  overflow: hidden;
-}
-
-.skeletonArtist {
+.skeletonTitle, .skeletonArtist, .skeletonBadge {
   height: 12px;
-  width: 50%;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
   border-radius: 4px;
   position: relative;
   overflow: hidden;
 }
 
-.skeletonBadge {
-  height: 14px;
-  width: 30%;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
-  position: relative;
-  overflow: hidden;
-}
+.skeletonTitle { width: 70%; height: 14px; }
+.skeletonArtist { width: 45%; }
+.skeletonBadge { width: 30%; height: 18px; border-radius: 12px; }
 
 .shimmer {
   position: absolute;
@@ -419,20 +332,52 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.06) 50%,
-    transparent 100%
-  );
-  animation: shimmerAnim 1.5s infinite;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+  animation: loadingShimmer 1.5s infinite;
 }
 
-@keyframes shimmerAnim {
-  0% {
-    transform: translateX(-100%);
+@keyframes loadingShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Placeholders & no results view */
+.searchPlaceholder, .noResults {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+  gap: 16px;
+  color: var(--text-secondary);
+}
+
+.placeholderIcon, .noResultsIcon {
+  color: var(--glass-highlight);
+  animation: floatGlow 6s infinite ease-in-out;
+}
+
+.searchPlaceholder h3, .noResults h3 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.searchPlaceholder p, .noResults p {
+  font-size: 14px;
+  max-width: 400px;
+}
+
+@media (max-width: 768px) {
+  .searchHeaderSection {
+    margin-top: 20px;
   }
-  100% {
-    transform: translateX(100%);
+  .title {
+    font-size: 28px;
+  }
+  .mainContent {
+    padding: 16px;
   }
 }

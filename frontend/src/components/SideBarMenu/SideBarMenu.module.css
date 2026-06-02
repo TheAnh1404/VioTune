@@ -103,22 +103,23 @@
 
 /* Active collapsed */
 .activeCollapsed {
-  background-color: #ffffff; 
-  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  box-shadow: var(--neon-glow-secondary);
 }
 
 .iconActiveCollapsed {
-  color: #0b0f24; 
+  color: #ffffff; 
   transition: all 0.3s ease;
 }
 
 /* Active expanded */
 .activeExpanded {
-  background: rgba(255, 255, 255, 0.1); 
+  background: rgba(139, 92, 246, 0.15); 
+  border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
 .iconActiveExpanded {
-  color: #ffffff; 
+  color: #a78bfa; 
 }
 
 /* Labels */
@@ -235,11 +236,11 @@
 }
 
 .activeTrack {
-  background: rgba(29, 185, 84, 0.15) !important;
+  background: rgba(139, 92, 246, 0.15) !important;
 }
 
 .activeTrack .trackName {
-  color: #1db954 !important;
+  color: #a78bfa !important;
 }
 
 /* Collapsed indicator badge */

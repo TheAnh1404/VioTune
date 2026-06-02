@@ -62,11 +62,11 @@ const ArtistPage = () => {
   const [tracks, setTracks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [playlists, setPlaylists] = useState([]);
-  const [activeTab, setActiveTab] = useState('popular'); // 'popular', 'dna', 'about'
+  const [activeTab, setActiveTab] = useState('popular'); // 'popular' | 'dna' | 'about'
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
   
-  // Audio DNA State
+  // Audio DNA states
   const [dnaMetrics, setDnaMetrics] = useState({
     danceability: 0,
     energy: 0,
@@ -116,7 +116,7 @@ const ArtistPage = () => {
         
         setTracks(fetchedTracks);
 
-        // Compute Averages for Music DNA if audio features exist
+        // Compute Averages for Music DNA
         if (fetchedTracks.length > 0) {
           let totalDance = 0, totalEnergy = 0, totalAcoustic = 0, totalValence = 0, totalTempo = 0;
           let validCount = 0;
@@ -186,13 +186,6 @@ const ArtistPage = () => {
     navigate('/player');
   };
 
-  const handlePlayAll = () => {
-    if (tracks.length > 0) {
-      playSong(tracks[0], tracks);
-      navigate('/player');
-    }
-  };
-
   const handleLikeToggle = async (e, song) => {
     e.stopPropagation();
     if (!user) return;
@@ -243,8 +236,6 @@ const ArtistPage = () => {
   };
 
   const bannerImg = getArtistBannerImage(artistName);
-
-  // Extract unique genres for chips
   const genres = [...new Set(tracks.map(t => t.track_genre).filter(Boolean))];
   const featuredSong = tracks.length > 0 ? tracks[0] : null;
 
@@ -254,12 +245,13 @@ const ArtistPage = () => {
     const danceWord = dnaMetrics.danceability > 70 ? 'nhịp điệu bắt tai và cực kỳ thích hợp cho các vũ điệu' : 'giai điệu bay bổng, chú trọng vào cảm xúc và nhạc cụ mộc';
     const valenceWord = dnaMetrics.valence > 60 ? 'vui tươi, tích cực' : dnaMetrics.valence < 40 ? 'u buồn, đầy tự sự' : 'nhiều tự sự và hoài niệm';
 
-    return `Âm nhạc của ${artistName} nổi bật với phong cách ${energyWord}. Sản phẩm sở hữu ${danceWord}, đem lại cho người nghe cảm giác ${valenceWord}. Với nhịp điệu trung bình khoảng ${dnaMetrics.tempo} BPM, đây là sự kết hợp hoàn hảo giữa kỹ thuật hòa âm hiện đại và chất liệu nghệ thuật đầy tính sáng tạo. Các sản phẩm của họ luôn mang một dấu ấn riêng khó lẫn lộn trong thư viện âm nhạc VioTune Core.`;
+    return `Âm nhạc của ${artistName} nổi bật với phong cách ${energyWord}. Sản phẩm sở hữu ${danceWord}, đem lại cho người nghe cảm giác ${valenceWord}. Với nhịp điệu trung bình khoảng ${dnaMetrics.tempo} BPM, đây là sự kết hợp hoàn hảo giữa kỹ thuật hòa âm hiện đại và chất liệu nghệ thuật đầy tính sáng tạo. Các sản phẩm của họ luôn mang một dấu ấn riêng khó lẫn lộn trong thư viện âm nhạc VioTune.`;
   };
 
   return (
     <div className={styles.artistPageContainer}>
-      {/* Toast Notification */}
+      
+      {/* Toast Notification popup */}
       {notification.show && (
         <div className={`${styles.notification} ${styles[notification.type]}`}>
           {notification.type === 'error' ? <AlertCircle size={18} /> : <Check size={18} />}
@@ -286,19 +278,19 @@ const ArtistPage = () => {
         />
 
         <div className={styles.mainContent}>
-          {/* Back button and navigation */}
+          {/* Back button */}
           <button className={styles.backBtn} onClick={() => navigate(-1)}>
-            <ArrowLeft size={18} /> Quay lại
+            <ArrowLeft size={16} /> Quay lại
           </button>
 
-          {/* Large Glassmorphic Artist Banner */}
+          {/* Glowing Hero Banner */}
           <div 
-            className={styles.artistBanner}
-            style={{ backgroundImage: `linear-gradient(to bottom, rgba(6, 8, 20, 0.1), rgba(6, 8, 20, 0.98)), url(${bannerImg})` }}
+            className={`${styles.artistBanner} glass-panel`}
+            style={{ backgroundImage: `linear-gradient(to bottom, rgba(6, 8, 20, 0.2), rgba(6, 8, 20, 0.98)), url(${bannerImg})` }}
           >
             <div className={styles.bannerContent}>
               <div className={styles.verifiedBadge}>
-                <Sparkles size={14} className={styles.sparkleIcon} /> Nghệ sĩ đã xác minh
+                <Sparkles size={12} className={styles.sparkleIcon} /> Nghệ sĩ VioTune Core
               </div>
               <h1 className={styles.artistTitleName}>{artistName}</h1>
               
@@ -311,18 +303,20 @@ const ArtistPage = () => {
               )}
 
               <p className={styles.listenerStats}>
-                {tracks.length * 1452 + 10243} người nghe hàng tháng • {tracks.length} sản phẩm âm nhạc
+                {tracks.length * 1530 + 10452} người nghe hàng tháng • {tracks.length} ca khúc đã phát hành
               </p>
             </div>
           </div>
 
-          {/* Quick Dashboard Split: DNA Metrics and Featured Release */}
+          {/* Quick Info Splitting Dashboard */}
           {!loading && featuredSong && (
             <div className={styles.dashboardSplit}>
-              {/* Left side: Featured release card */}
-              <div className={styles.featuredReleaseCard} onClick={() => handlePlaySong(featuredSong)}>
+              
+              {/* Featured Release Card */}
+              <div className={`${styles.featuredReleaseCard} glass-panel`} onClick={() => handlePlaySong(featuredSong)}>
                 <div className={styles.cardHeader}>
-                  <Flame size={16} color="#fbbf24" /> <span>Sản phẩm nổi bật</span>
+                  <Flame size={14} style={{ color: 'var(--accent-tertiary)' }} />
+                  <span>Sản phẩm nổi tiếng nhất</span>
                 </div>
                 <div className={styles.featuredBody}>
                   <img 
@@ -333,34 +327,35 @@ const ArtistPage = () => {
                   <div className={styles.featuredText}>
                     <h3 className={styles.featuredTitle}>{featuredSong.track_name}</h3>
                     <p className={styles.featuredArtist}>{featuredSong.artists}</p>
-                    <span className={styles.featuredBadge}>Thịnh hành #{featuredSong.popularity}</span>
+                    <span className={styles.featuredBadge}>Mức độ phổ biến: {featuredSong.popularity}/100</span>
                   </div>
                 </div>
                 <button className={styles.featuredPlayBtn}>
-                  <Play size={16} fill="black" /> Phát ngay
+                  <Play size={14} fill="currentColor" /> Phát ngay
                 </button>
               </div>
 
-              {/* Right side: Music DNA Overview */}
-              <div className={styles.musicDnaOverviewCard}>
+              {/* Music DNA Overview Mini Box */}
+              <div className={`${styles.musicDnaOverviewCard} glass-panel`}>
                 <div className={styles.cardHeader}>
-                  <Activity size={16} color="#a78bfa" /> <span>Bản đồ phong cách âm nhạc (Music DNA)</span>
+                  <Activity size={14} style={{ color: 'var(--accent-primary)' }} />
+                  <span>Bản đồ phong cách âm nhạc (Music DNA)</span>
                 </div>
                 <div className={styles.dnaMiniGrid}>
                   <div className={styles.dnaMiniItem}>
-                    <span className={styles.dnaMiniLabel}>Nhịp điệu</span>
+                    <span className={styles.dnaMiniLabel}>Nhịp điệu trung bình</span>
                     <span className={styles.dnaMiniValue}>{dnaMetrics.tempo} BPM</span>
                   </div>
                   <div className={styles.dnaMiniItem}>
-                    <span className={styles.dnaMiniLabel}>Năng lượng</span>
+                    <span className={styles.dnaMiniLabel}>Độ năng động</span>
                     <span className={styles.dnaMiniValue}>{dnaMetrics.energy}%</span>
                   </div>
                   <div className={styles.dnaMiniItem}>
-                    <span className={styles.dnaMiniLabel}>Độ mộc</span>
+                    <span className={styles.dnaMiniLabel}>Chất acoustic</span>
                     <span className={styles.dnaMiniValue}>{dnaMetrics.acousticness}%</span>
                   </div>
                   <div className={styles.dnaMiniItem}>
-                    <span className={styles.dnaMiniLabel}>Vui tươi</span>
+                    <span className={styles.dnaMiniLabel}>Cảm xúc tươi vui</span>
                     <span className={styles.dnaMiniValue}>{dnaMetrics.valence}%</span>
                   </div>
                 </div>
@@ -374,46 +369,46 @@ const ArtistPage = () => {
               className={`${styles.tabBtn} ${activeTab === 'popular' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('popular')}
             >
-              <Music size={16} /> Danh sách sản phẩm
+              <Music size={14} /> Tác phẩm nổi bật
             </button>
             <button 
               className={`${styles.tabBtn} ${activeTab === 'dna' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('dna')}
             >
-              <Sliders size={16} /> Bản đồ DNA chi tiết
+              <Sliders size={14} /> Bản đồ DNA chi tiết
             </button>
             <button 
               className={`${styles.tabBtn} ${activeTab === 'about' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('about')}
             >
-              <Info size={16} /> Giới thiệu phong cách
+              <Info size={14} /> Giới thiệu phong cách
             </button>
           </div>
 
-          {/* Tab Content Display */}
+          {/* Tab Subpanels Display */}
           <div className={styles.tabContentPanel}>
             {loading ? (
               <div className={styles.tracksLoader}>
                 <div className={styles.spinner}></div>
-                <p>VioTune Core đang giải mã phong cách ca sĩ...</p>
+                <p>Hệ thống AI đang giải mã dữ liệu của nghệ sĩ...</p>
               </div>
             ) : tracks.length === 0 ? (
               <div className={styles.emptyTracks}>
-                <Music size={48} className={styles.emptyTracksIcon} />
-                <h4>Không tìm thấy bài hát nào của nghệ sĩ này</h4>
-                <button onClick={() => navigate('/search')} className={styles.searchRedirectBtn}>Khám phá bài hát khác</button>
+                <Music size={44} className={styles.emptyTracksIcon} />
+                <h4>Không tìm thấy bài hát nào của nghệ sĩ này trên VioTune</h4>
+                <button onClick={() => navigate('/search')} className={styles.searchRedirectBtn}>Khám phá ca sĩ khác</button>
               </div>
             ) : (
               <>
-                {/* TAB 1: Popular tracks list */}
+                {/* TAB 1: Popular tracks list table */}
                 {activeTab === 'popular' && (
                   <div className={styles.songsTable}>
                     <div className={styles.tableHeaderRow}>
                       <span className={styles.colIndex}>#</span>
-                      <span className={styles.colTitleHeader}>TIÊU ĐỀ</span>
-                      <span className={styles.colGenreHeader}>THỂ LOẠI</span>
-                      <span className={styles.colPopularityHeader}>XU HƯỚNG</span>
-                      <span className={styles.colActionsHeader}></span>
+                      <span>TIÊU ĐỀ</span>
+                      <span>THỂ LOẠI</span>
+                      <span>XU HƯỚNG</span>
+                      <span className={styles.colActions}></span>
                     </div>
 
                     <div className={styles.tableBody}>
@@ -429,7 +424,7 @@ const ArtistPage = () => {
                             onClick={() => handlePlaySong(song)}
                           >
                             <span className={styles.colIndex}>
-                              {isCurrent ? <Play size={14} fill="#a78bfa" color="#a78bfa" /> : idx + 1}
+                              {isCurrent ? <Play size={12} fill="var(--accent-primary)" color="var(--accent-primary)" /> : idx + 1}
                             </span>
 
                             <div className={styles.colTitleArea}>
@@ -440,9 +435,9 @@ const ArtistPage = () => {
                               </div>
                             </div>
 
-                            <span className={styles.colGenre}>
+                            <div className={styles.colGenre}>
                               {song.track_genre && <span className={styles.genreBadge}>{song.track_genre}</span>}
-                            </span>
+                            </div>
 
                             <div className={styles.colPopularity}>
                               <div className={styles.popBarContainer} title={`Popularity: ${song.popularity}/100`}>
@@ -456,7 +451,7 @@ const ArtistPage = () => {
                                 onClick={(e) => handleLikeToggle(e, song)}
                                 title={isLiked ? "Xóa khỏi Yêu thích" : "Thêm vào Yêu thích"}
                               >
-                                <Heart size={16} fill={isLiked ? "#ef4444" : "none"} />
+                                <Heart size={14} fill={isLiked ? "var(--accent-danger)" : "none"} />
                               </button>
 
                               <div className={styles.dropdownContainer}>
@@ -465,7 +460,7 @@ const ArtistPage = () => {
                                   onClick={() => setActiveDropdown(activeDropdown === song.track_id ? null : song.track_id)}
                                   title="Thêm vào playlist"
                                 >
-                                  <ListPlus size={16} />
+                                  <ListPlus size={14} />
                                 </button>
                                 
                                 {activeDropdown === song.track_id && (
@@ -473,7 +468,7 @@ const ArtistPage = () => {
                                     <div className={styles.dropdownHeader}>Thêm vào playlist</div>
                                     {playlists.length === 0 ? (
                                       <div className={styles.noPlaylistsMsg} onClick={() => navigate('/playlists')}>
-                                        <Plus size={14} /> Tạo playlist mới
+                                        <Plus size={12} /> Tạo playlist mới
                                       </div>
                                     ) : (
                                       playlists.map(pl => (
@@ -497,14 +492,13 @@ const ArtistPage = () => {
                   </div>
                 )}
 
-                {/* TAB 2: Music DNA detailed progress meters */}
+                {/* TAB 2: Detailed progressive DNA metrics */}
                 {activeTab === 'dna' && (
-                  <div className={styles.dnaFullPanel}>
-                    <h3 className={styles.dnaTitle}><BarChart3 size={18} /> Phân tích đặc trưng sóng âm trung bình</h3>
-                    <p className={styles.dnaSubtitle}>Dữ liệu được giải mã thời gian thực từ 30 bài hát phổ biến nhất của nghệ sĩ này.</p>
+                  <div className={`${styles.dnaFullPanel} glass-panel`}>
+                    <h3 className={styles.dnaTitle}><BarChart3 size={16} /> Phân tích chỉ số đặc trưng sóng âm</h3>
+                    <p className={styles.dnaSubtitle}>Dữ liệu sóng được tổng hợp từ các bản thu âm phổ biến nhất của nghệ sĩ này.</p>
                     
                     <div className={styles.dnaMetersList}>
-                      {/* Metric 1 */}
                       <div className={styles.dnaMeterItem}>
                         <div className={styles.meterInfo}>
                           <span className={styles.meterName}>Danceability (Nhịp điệu khiêu vũ)</span>
@@ -514,11 +508,10 @@ const ArtistPage = () => {
                           <div className={`${styles.meterBarInner} ${styles.danceBar}`} style={{ width: `${dnaMetrics.danceability}%` }}></div>
                         </div>
                         <span className={styles.meterDesc}>
-                          {dnaMetrics.danceability > 70 ? 'Phù hợp tối đa cho vũ đạo sôi động và những nhịp đập nhanh.' : 'Chú trọng nhạc cụ mộc mạc hoặc tập trung biểu diễn thanh âm truyền cảm.'}
+                          {dnaMetrics.danceability > 70 ? 'Thành phẩm mang tính nhịp điệu cao, bắt tai và cực kỳ thích hợp cho các vũ điệu sôi động.' : 'Chú trọng vào nhạc cụ truyền thống, giai điệu mộc mạc và cảm thụ thanh âm sâu lắng.'}
                         </span>
                       </div>
 
-                      {/* Metric 2 */}
                       <div className={styles.dnaMeterItem}>
                         <div className={styles.meterInfo}>
                           <span className={styles.meterName}>Energy (Cường độ và Năng lượng sóng)</span>
@@ -528,11 +521,10 @@ const ArtistPage = () => {
                           <div className={`${styles.meterBarInner} ${styles.energyBar}`} style={{ width: `${dnaMetrics.energy}%` }}></div>
                         </div>
                         <span className={styles.meterDesc}>
-                          {dnaMetrics.energy > 70 ? 'Âm thanh bùng nổ, dồn dập, tiết tấu mạnh mẽ.' : 'Thư thái, êm đềm, phù hợp để thư giãn hoặc tập trung trí não.'}
+                          {dnaMetrics.energy > 70 ? 'Âm thanh tràn đầy năng lượng, dồn dập, sắc bén và bùng nổ.' : 'Tiết tấu chậm rãi, êm đềm, phù hợp để thư giãn tinh thần và thiền định.'}
                         </span>
                       </div>
 
-                      {/* Metric 3 */}
                       <div className={styles.dnaMeterItem}>
                         <div className={styles.meterInfo}>
                           <span className={styles.meterName}>Acousticness (Chất liệu nhạc cụ mộc)</span>
@@ -542,48 +534,48 @@ const ArtistPage = () => {
                           <div className={`${styles.meterBarInner} ${styles.acousticBar}`} style={{ width: `${dnaMetrics.acousticness}%` }}></div>
                         </div>
                         <span className={styles.meterDesc}>
-                          {dnaMetrics.acousticness > 50 ? 'Đậm chất nhạc cụ nguyên bản, piano, guitar acoustic và giọng hát mộc.' : 'Sử dụng nhiều âm thanh điện tử tân tiến, synthesizer và phối khí kỹ thuật số.'}
+                          {dnaMetrics.acousticness > 50 ? 'Sử dụng nhạc cụ nguyên bản, piano mộc, ghi-ta acoustic và biểu trưng mộc mạc của giọng ca.' : 'Kết hợp nhiều synth điện tử, hòa âm phối khí hiện đại và hiệu ứng âm thanh số.'}
                         </span>
                       </div>
 
-                      {/* Metric 4 */}
                       <div className={styles.dnaMeterItem}>
                         <div className={styles.meterInfo}>
-                          <span className={styles.meterName}>Valence (Độ tích cực / Cảm xúc vui tươi)</span>
+                          <span className={styles.meterName}>Valence (Độ tươi vui / Cảm xúc tích cực)</span>
                           <span className={styles.meterValue}>{dnaMetrics.valence}%</span>
                         </div>
                         <div className={styles.meterBarOuter}>
                           <div className={`${styles.meterBarInner} ${styles.valenceBar}`} style={{ width: `${dnaMetrics.valence}%` }}></div>
                         </div>
                         <span className={styles.meterDesc}>
-                          {dnaMetrics.valence > 60 ? 'Tươi vui, tràn đầy cảm hứng, năng lượng tích cực.' : 'Mang nhiều sắc thái trầm buồn, nội tâm hoài niệm hoặc những tâm sự sâu thẳm.'}
+                          {dnaMetrics.valence > 60 ? 'Tươi sáng, mang nhiều cảm hứng lạc quan, vui vẻ.' : 'Thấm đượm sự u buồn, tự sự đầy chiêm nghiệm hoài niệm về cuộc sống.'}
                         </span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* TAB 3: Dynamic Biography based on music characteristics */}
+                {/* TAB 3: Biography text & static indicators */}
                 {activeTab === 'about' && (
                   <div className={styles.aboutPanel}>
                     <div className={styles.aboutCard}>
                       <div className={styles.biographyHeader}>
-                        <Award size={20} color="#c084fc" /> <h3>Hồ sơ phong cách nghệ thuật</h3>
+                        <Award size={18} style={{ color: 'var(--accent-primary)' }} />
+                        <h3>Giới thiệu Phong cách & Đặc trưng</h3>
                       </div>
                       <p className={styles.biographyText}>{getBioText()}</p>
                       
                       <div className={styles.statisticsBlock}>
                         <div className={styles.statBox}>
-                          <Disc size={20} className={styles.statIcon} />
+                          <Disc size={18} className={styles.statIcon} />
                           <div className={styles.statBoxText}>
                             <h4>Nhịp điệu chủ đạo</h4>
                             <p>{dnaMetrics.tempo} BPM</p>
                           </div>
                         </div>
                         <div className={styles.statBox}>
-                          <Flame size={20} className={styles.statIcon} />
+                          <Flame size={18} className={styles.statIcon} style={{ color: 'var(--accent-tertiary)' }} />
                           <div className={styles.statBoxText}>
-                            <h4>Độ thịnh hành trung bình</h4>
+                            <h4>Độ phổ biến trung bình</h4>
                             <p>{Math.round(tracks.reduce((acc, curr) => acc + curr.popularity, 0) / tracks.length)} / 100</p>
                           </div>
                         </div>
