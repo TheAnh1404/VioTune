@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Music, Users, Layers } from "lucide-react";
+import { API_URL } from '../config';
 
 function Recommendation() {
   const navigate = useNavigate();
@@ -18,21 +19,29 @@ function Recommendation() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Search songs as user types
+  // Search songs as user types (race-safe: AbortController cancels in-flight requests on new keystrokes)
   useEffect(() => {
+    if (!songQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    let active = true;
+    const controller = new AbortController();
+
     const searchSongs = async () => {
-      if (!songQuery.trim()) {
-        setSearchResults([]);
-        return;
-      }
       try {
-        const res = await fetch(`http://127.0.0.1:8000/songs/search?q=${encodeURIComponent(songQuery)}&limit=5`);
+        const res = await fetch(
+          `${API_URL}/songs/search?q=${encodeURIComponent(songQuery)}&limit=5`,
+          { signal: controller.signal }
+        );
         const json = await res.json();
-        if (json.status === "success" && json.data.length > 0) {
+        if (active && json.status === "success" && json.data.length > 0) {
           setSearchResults(json.data);
         }
       } catch (err) {
-        console.error("Search error:", err);
+        if (err.name !== 'AbortError' && active) {
+          console.error("Search error:", err);
+        }
       }
     };
 
@@ -40,7 +49,11 @@ function Recommendation() {
       searchSongs();
     }, 300);
 
-    return () => clearTimeout(delayDebounce);
+    return () => {
+      active = false;
+      controller.abort();
+      clearTimeout(delayDebounce);
+    };
   }, [songQuery]);
 
   const selectSong = (song) => {
@@ -64,15 +77,15 @@ function Recommendation() {
 
     try {
       // 1. Fetch Content-Based (CB)
-      const cbRes = await fetch(`http://127.0.0.1:8000/recommend/content?song_id=${songId}&top_n=5`);
+      const cbRes = await fetch(`${API_URL}/recommend/content?song_id=${songId}&top_n=5`);
       const cbJson = await cbRes.json();
       
       // 2. Fetch Collaborative Filtering (CF)
-      const cfRes = await fetch(`http://127.0.0.1:8000/recommend/cf?user_id=${userId}&top_n=5`);
+      const cfRes = await fetch(`${API_URL}/recommend/cf?user_id=${userId}&top_n=5`);
       const cfJson = await cfRes.json();
       
       // 3. Fetch Hybrid
-      const hyRes = await fetch(`http://127.0.0.1:8000/recommend?user_id=${userId}&song_id=${songId}&top_n=5`);
+      const hyRes = await fetch(`${API_URL}/recommend?user_id=${userId}&song_id=${songId}&top_n=5`);
       const hyJson = await hyRes.json();
 
       if (cbJson.status === "success") setCbRecs(cbJson.data);

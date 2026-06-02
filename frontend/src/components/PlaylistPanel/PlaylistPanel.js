@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Music, User, Heart, Trash2 } from 'lucide-react';
 import styles from './PlaylistPanel.module.css';
+import { API_URL } from '../../config';
 
 const getCoverImage = (trackId, genre) => {
   const images = [
@@ -27,7 +28,7 @@ const PlaylistPanel = ({ userId = 42, onPlaySong, currentSong, isPlaying, refres
   const fetchLikedSongs = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/liked?user_id=${userId}`);
+      const res = await fetch(`${API_URL}/songs/liked?user_id=${userId}`);
       const json = await res.json();
       if (json.status === "success") {
         setLikedSongs(json.data);
@@ -47,8 +48,8 @@ const PlaylistPanel = ({ userId = 42, onPlaySong, currentSong, isPlaying, refres
   const handleUnlike = async (e, trackId) => {
     e.stopPropagation(); // Avoid playing the song
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${trackId}/like?user_id=${userId}`, {
-        method: 'POST'
+      const res = await fetch(`${API_URL}/songs/${trackId}/like?user_id=${userId}`, {
+        method: 'DELETE'
       });
       const json = await res.json();
       if (json.status === "success") {

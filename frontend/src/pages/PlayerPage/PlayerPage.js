@@ -9,6 +9,7 @@ import {
   Heart, Volume2, VolumeX, ListMusic, AlignLeft, Info,
   ChevronLeft, Award, Disc, Sparkles
 } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const getCoverImage = (trackId) => {
   const images = [
@@ -74,7 +75,7 @@ const PlayerPage = () => {
       if (!currentSong || !currentSong.track_id) return;
       setLoadingSimilar(true);
       try {
-        const res = await fetch(`http://127.0.0.1:8000/recommend/content?song_id=${currentSong.track_id}&top_n=8`);
+        const res = await fetch(`${API_URL}/recommend/content?song_id=${currentSong.track_id}&top_n=8`);
         const json = await res.json();
         if (json.status === "success") {
           const data = json.data.map(song => ({
@@ -379,7 +380,29 @@ const PlayerPage = () => {
                 {!currentSong ? (
                   <p className={styles.noInfoText}>Chọn một bài hát để xem gợi ý</p>
                 ) : loadingSimilar ? (
-                  <p className={styles.noInfoText}>Đang phân tích acoustic features...</p>
+                  <div className={styles.similarList}>
+                    <div className={styles.similarBanner}>
+                      🪄 Đang chạy thuật toán Content-Based KNN để tìm bài hát tương đồng...
+                    </div>
+                    {Array.from({ length: 6 }).map((_, idx) => (
+                      <div key={idx} className={styles.skeletonItem}>
+                        <div className={styles.skeletonIndex}>
+                          <div className={styles.shimmer}></div>
+                        </div>
+                        <div className={styles.skeletonThumb}>
+                          <div className={styles.shimmer}></div>
+                        </div>
+                        <div className={styles.skeletonInfo}>
+                          <div className={styles.skeletonTitle}>
+                            <div className={styles.shimmer}></div>
+                          </div>
+                          <div className={styles.skeletonArtist}>
+                            <div className={styles.shimmer}></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : similarSongs.length === 0 ? (
                   <p className={styles.noInfoText}>Không tìm thấy bài hát tương đồng</p>
                 ) : (

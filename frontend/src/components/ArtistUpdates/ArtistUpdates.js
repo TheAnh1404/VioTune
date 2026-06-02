@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ArtistUpdates.module.css';
 import { Heart } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const getCoverImage = (trackId, genre) => {
   const images = [
@@ -52,7 +53,7 @@ const ArtistUpdates = ({ onPlaySong, currentSong, likedSongIds = new Set(), onLi
     const fetchUpdates = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/songs/random?limit=6");
+        const res = await fetch(`${API_URL}/songs/random?limit=6`);
         const json = await res.json();
         if (json.status === "success") {
           setUpdates(json.data);

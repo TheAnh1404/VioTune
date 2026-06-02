@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './AIRecommendationStation.module.css';
 import { Sliders, Activity, Cpu, Search, Music, Layers, Sparkles, RefreshCw, Heart } from 'lucide-react';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+import { API_URL } from '../../config';
 
 const getCoverImage = (trackId) => {
   const images = [

@@ -1,9 +1,8 @@
 // ─── Tái Cấu Trúc AuthContext cho VioTune FastAPI Backend ────────────────────────
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_URL } from '../config';
 
 const AuthContext = createContext(null);
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
@@ -162,7 +161,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const res = await fetch(`${API_URL}/songs/${trackId}/like?user_id=${user.uid}`, {
-        method: 'POST'
+        method: 'DELETE'
       });
       const json = await res.json();
       if (json.status !== "success") {

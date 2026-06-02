@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './PersonalPlaylist.module.css';
 import { Heart } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const getCoverImage = (trackId, genre) => {
   const images = [
@@ -52,7 +53,7 @@ const PersonalPlaylist = ({ userId = 42, onPlaySong, likedSongIds = new Set(), o
     const fetchCfRecs = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://127.0.0.1:8000/recommend/cf?user_id=${userId}&top_n=6`);
+        const res = await fetch(`${API_URL}/recommend/cf?user_id=${userId}&top_n=6`);
         const json = await res.json();
         if (json.status === "success") {
           setCfRecs(json.data);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './PlaylistSection.module.css';
 import { Heart } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const PlaylistCard = ({ name, tracks, imageUrl, onClick }) => (
   <div className={styles.card} onClick={onClick} style={{ cursor: 'pointer' }}>
@@ -23,7 +24,7 @@ const PlaylistSection = ({ onSelectPlaylist }) => {
     const fetchPlaylists = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/playlists?limit=5");
+        const res = await fetch(`${API_URL}/playlists?limit=5`);
         const json = await res.json();
         if (json.status === "success") {
           setPlaylists(json.data);

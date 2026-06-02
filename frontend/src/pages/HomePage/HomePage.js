@@ -20,13 +20,15 @@ import TrendingNow from '../../components/TrendingNow/TrendingNow';
 import RecentlySeen from '../../components/RecentlySeen/RecentlySeen';
 import MusicPlayer from '../../components/MusicPlayer/MusicPlayer';
 import AIRecommendationStation from '../../components/AIRecommendationStation/AIRecommendationStation';
+import ErrorBoundary from '../../components/ErrorBoundary/ErrorBoundary';
 import { useAuth } from '../../context/AuthContext';
 import { usePlayback } from '../../context/PlaybackContext';
+import { API_URL } from '../../config';
 
 const HomePage = () => {
   const navigate = useNavigate();
   
-  // ── Firebase Auth context (Hoisted Global State) ──────────────────────────────
+  // ── Auth context (Hoisted Global State) ───────────────────────────────────────
   const { user, logOut, likeSong, unlikeSong, likedSongsList: likedSongs, likedSongIds } = useAuth();
   const userId = user?.uid || 'anonymous';
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
@@ -59,7 +61,7 @@ const HomePage = () => {
   useEffect(() => {
     const fetchArtists = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/artists?limit=5");
+        const res = await fetch(`${API_URL}/artists?limit=5`);
         const json = await res.json();
         if (json.status === "success") {
           setPopularArtists(json.data);
@@ -75,7 +77,7 @@ const HomePage = () => {
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/songs/random?limit=10");
+        const res = await fetch(`${API_URL}/songs/random?limit=10`);
         const json = await res.json();
         if (json.status === "success") {
           setTrendingSongs(json.data);
@@ -130,7 +132,7 @@ const HomePage = () => {
 
   const handleSelectPlaylist = async (playlistName, genreName) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/playlists/${genreName}/songs?limit=15`);
+      const res = await fetch(`${API_URL}/playlists/${genreName}/songs?limit=15`);
       const json = await res.json();
       if (json.status === "success") {
         setPlaylistSongs(json.data);
@@ -149,7 +151,7 @@ const HomePage = () => {
     }
   };
 
-  // ── Log out via Firebase ─────────────────────────────────────────────────────
+  // ── Log out ──────────────────────────────────────────────────────────────────
   const handleLogOut = async () => {
     try {
       await logOut();
@@ -181,94 +183,95 @@ const HomePage = () => {
               <div className={styles.placeholderLeft}>
                 <FeatureCards />
                 
-                {/* AI Recommendation Station Control Dashboard */}
-                <AIRecommendationStation 
-                  userId={userId}
-                  currentSong={currentSong}
-                  onPlaySong={handlePlaySong}
-                  likedSongIds={likedSongIds}
-                  onLikeSong={handleLikeSong}
-                  likedTrigger={likedSongs?.length || 0}
-                />
+                {/* AI Recommendation Station Control Dashboard & Personal Playlist (CF) */}
+                <ErrorBoundary>
+                  <AIRecommendationStation 
+                    userId={userId}
+                    currentSong={currentSong}
+                    onPlaySong={handlePlaySong}
+                    likedSongIds={likedSongIds}
+                    onLikeSong={handleLikeSong}
+                    likedTrigger={likedSongs?.length || 0}
+                  />
+                  
+                  <PersonalPlaylist 
+                    userId={userId} 
+                    onPlaySong={handlePlaySong} 
+                    likedSongIds={likedSongIds}
+                    onLikeSong={handleLikeSong}
+                  />
+                </ErrorBoundary>
+
+                {/* Curated Playlist Lists & Daily Picks */}
+                <ErrorBoundary>
+                  <PlaylistSection 
+                    onSelectPlaylist={handleSelectPlaylist}
+                  />
+
+                  <ArtistUpdates 
+                    onPlaySong={handlePlaySong}
+                    currentSong={currentSong}
+                    likedSongIds={likedSongIds}
+                    onLikeSong={handleLikeSong}
+                  />
+
+                  <DailyPick 
+                    onPlaySong={handlePlaySong}
+                    currentSong={currentSong}
+                    likedSongIds={likedSongIds}
+                    onLikeSong={handleLikeSong}
+                  />
+                </ErrorBoundary>
                 
-                {/* 1. Personalized CF Recommendations Section */}
-                <PersonalPlaylist 
-                  userId={userId} 
-                  onPlaySong={handlePlaySong} 
-                  likedSongIds={likedSongIds}
-                  onLikeSong={handleLikeSong}
-                />
+                {/* Dynamic Artists Followed & Content-Based Recommendations */}
+                <ErrorBoundary>
+                  <ArtistsFollowed 
+                    artists={popularArtists}
+                    onArtistClick={() => navigate('/search')}
+                  />
+                  
+                  <HeroSeries 
+                    onSelectSeries={handleSelectPlaylist}
+                  />
 
-                {/* Curated Playlist list */}
-                <PlaylistSection 
-                  onSelectPlaylist={handleSelectPlaylist}
-                />
+                  <RecommendationSection 
+                    currentSong={currentSong} 
+                    onPlaySong={handlePlaySong} 
+                    likedSongIds={likedSongIds}
+                    onLikeSong={handleLikeSong}
+                  />
 
-                <ArtistUpdates 
-                  onPlaySong={handlePlaySong}
-                  currentSong={currentSong}
-                  likedSongIds={likedSongIds}
-                  onLikeSong={handleLikeSong}
-                />
+                  <RecentAlbums 
+                    onAlbumClick={() => navigate('/search')}
+                  />
+                  
+                  <InterestGenres 
+                    onSelectGenre={() => navigate('/search')}
+                  />
+                  
+                  <MoreArtists 
+                    artists={popularArtists}
+                    onArtistClick={() => navigate('/search')}
+                  />
+                </ErrorBoundary>
 
-                {/* Curated Daily Picks */}
-                <DailyPick 
-                  onPlaySong={handlePlaySong}
-                  currentSong={currentSong}
-                  likedSongIds={likedSongIds}
-                  onLikeSong={handleLikeSong}
-                />
-                
-                {/* Dynamic Artists Followed */}
-                <ArtistsFollowed 
-                  artists={popularArtists}
-                  onArtistClick={() => navigate('/search')}
-                />
-                
-                <HeroSeries 
-                  onSelectSeries={handleSelectPlaylist}
-                />
+                {/* Trending & Recently Played History */}
+                <ErrorBoundary>
+                  <TrendingNow 
+                    songs={playlistSongs.length > 0 ? playlistSongs : trendingSongs} 
+                    title={playlistTitle ? playlistTitle : "Trending Now"} 
+                    onPlaySong={handlePlaySong} 
+                    currentSong={currentSong} 
+                    likedSongIds={likedSongIds}
+                    onLikeSong={handleLikeSong}
+                    isLoading={false}
+                  />
 
-                {/* 2. Content-Based Recommendations Section */}
-                <RecommendationSection 
-                  currentSong={currentSong} 
-                  onPlaySong={handlePlaySong} 
-                  likedSongIds={likedSongIds}
-                  onLikeSong={handleLikeSong}
-                />
-
-                {/* Dynamic Albums */}
-                <RecentAlbums 
-                  onAlbumClick={() => navigate('/search')}
-                />
-                
-                {/* Interactive Genre Selector */}
-                <InterestGenres 
-                  onSelectGenre={() => navigate('/search')}
-                />
-                
-                {/* Dynamic Suggestions */}
-                <MoreArtists 
-                  artists={popularArtists}
-                  onArtistClick={() => navigate('/search')}
-                />
-
-                {/* 3. Search and Trending Section */}
-                <TrendingNow 
-                  songs={playlistSongs.length > 0 ? playlistSongs : trendingSongs} 
-                  title={playlistTitle ? playlistTitle : "Trending Now"} 
-                  onPlaySong={handlePlaySong} 
-                  currentSong={currentSong} 
-                  likedSongIds={likedSongIds}
-                  onLikeSong={handleLikeSong}
-                  isLoading={false}
-                />
-
-                {/* Dynamic Playback History */}
-                <RecentlySeen 
-                  recentSongs={recentSongs}
-                  onPlaySong={handlePlaySong}
-                />
+                  <RecentlySeen 
+                    recentSongs={recentSongs}
+                    onPlaySong={handlePlaySong}
+                  />
+                </ErrorBoundary>
               </div>
             </div>
             {/* Slide-out Queue Drawer */}

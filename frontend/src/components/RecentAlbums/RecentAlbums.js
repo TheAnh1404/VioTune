@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './RecentAlbums.module.css';
 import { Heart } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const AlbumCard = ({ title, artist, coverUrl, onClick }) => (
   <div className={styles.card} onClick={onClick} style={{ cursor: 'pointer' }}>
@@ -30,7 +31,7 @@ const RecentAlbums = ({ onAlbumClick }) => {
     const fetchAlbums = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/albums?limit=6");
+        const res = await fetch(`${API_URL}/albums?limit=6`);
         const json = await res.json();
         if (json.status === "success") {
           setAlbums(json.data);

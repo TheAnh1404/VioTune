@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './RecommendationSection.module.css';
 import { Heart } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const getCoverImage = (trackId, genre) => {
   const images = [
@@ -54,9 +55,9 @@ const RecommendationSection = ({ currentSong, onPlaySong, likedSongIds = new Set
       try {
         let url = "";
         if (currentSong && currentSong.track_id) {
-          url = `http://127.0.0.1:8000/recommend/content?song_id=${currentSong.track_id}&top_n=6`;
+          url = `${API_URL}/recommend/content?song_id=${currentSong.track_id}&top_n=6`;
         } else {
-          url = `http://127.0.0.1:8000/songs/random?limit=6`;
+          url = `${API_URL}/songs/random?limit=6`;
         }
         
         const res = await fetch(url);

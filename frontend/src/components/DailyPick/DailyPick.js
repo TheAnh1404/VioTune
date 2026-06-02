@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './DailyPick.module.css';
 import { Heart, Play, Pause } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const getCoverImage = (trackId, genre) => {
   const images = [
@@ -68,7 +69,7 @@ const DailyPick = ({ onPlaySong, currentSong, likedSongIds = new Set(), onLikeSo
     const fetchDailyPicks = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/songs/dailypick?limit=5");
+        const res = await fetch(`${API_URL}/songs/dailypick?limit=5`);
         const json = await res.json();
         if (json.status === "success") {
           setSongs(json.data);

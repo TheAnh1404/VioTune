@@ -7,6 +7,7 @@ import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
 import styles from './SearchPage.module.css';
 import { Play, Heart, Search, Music } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const getCoverImage = (trackId) => {
   const images = [
@@ -39,28 +40,41 @@ const SearchPage = () => {
   const [loading, setLoading] = useState(false);
   // Global hoisted likes state from AuthContext replaces local states
 
-  // Search API Call
+  // Search API Call (race-safe: AbortController cancels in-flight requests on new keystrokes)
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
+      setLoading(false);
       return;
     }
     setLoading(true);
+    let active = true;
+    const controller = new AbortController();
+
     const delayDebounce = setTimeout(async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8000/songs/search?q=${encodeURIComponent(query)}&limit=20`);
+        const res = await fetch(
+          `${API_URL}/songs/search?q=${encodeURIComponent(query)}&limit=20`,
+          { signal: controller.signal }
+        );
         const json = await res.json();
-        if (json.status === "success") {
+        if (active && json.status === "success") {
           setResults(json.data);
         }
       } catch (err) {
-        console.error("Search failed:", err);
+        if (err.name !== 'AbortError' && active) {
+          console.error("Search failed:", err);
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }, 400);
 
-    return () => clearTimeout(delayDebounce);
+    return () => {
+      active = false;
+      controller.abort();
+      clearTimeout(delayDebounce);
+    };
   }, [query]);
 
   const handlePlay = (song) => {

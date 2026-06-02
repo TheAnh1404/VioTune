@@ -699,7 +699,8 @@ def get_song(track_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/songs/{track_id}/like")
-def toggle_like_song(track_id: str, user_id: str):
+def like_song(track_id: str, user_id: str):
+    """Idempotent: liking an already-liked song is a no-op (returns success)."""
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     
@@ -715,28 +716,43 @@ def toggle_like_song(track_id: str, user_id: str):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # Check if already liked
+    # Check if already liked — idempotent, return success either way
     cursor.execute("SELECT 1 FROM liked_songs WHERE user_id = ? AND track_id = ?", (user_id, track_id))
     row = cursor.fetchone()
     
-    if row:
-        # Unlike
-        cursor.execute("DELETE FROM liked_songs WHERE user_id = ? AND track_id = ?", (user_id, track_id))
-        liked = False
-        if track_id in user_likes[user_id]:
-            user_likes[user_id].remove(track_id)
-    else:
-        # Like
+    if not row:
         import datetime
         liked_at = datetime.datetime.now().isoformat()
         cursor.execute("INSERT INTO liked_songs (user_id, track_id, liked_at) VALUES (?, ?, ?)", (user_id, track_id, liked_at))
-        liked = True
         user_likes[user_id].add(track_id)
+        conn.commit()
         
+    conn.close()
+    
+    return {"status": "success", "liked": True, "message": "Song liked"}
+
+
+@app.delete("/songs/{track_id}/like")
+def unlike_song(track_id: str, user_id: str):
+    """Idempotent: unliking an already-unliked song is a no-op (returns success)."""
+    if songs_df.empty:
+        raise HTTPException(status_code=500, detail="Dataset not loaded")
+    
+    if user_id not in user_likes:
+        user_likes[user_id] = set()
+    
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM liked_songs WHERE user_id = ? AND track_id = ?", (user_id, track_id))
+    if track_id in user_likes[user_id]:
+        user_likes[user_id].remove(track_id)
+    
     conn.commit()
     conn.close()
     
-    return {"status": "success", "liked": liked, "message": "Song liked" if liked else "Song unliked"}
+    return {"status": "success", "liked": False, "message": "Song unliked"}
 
 
 @app.get("/genres")

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
+import { API_URL } from '../config';
 
 const PlaybackContext = createContext(null);
 
@@ -40,7 +41,7 @@ export const PlaybackProvider = ({ children }) => {
     }
     try {
       setPreviewLoading(true);
-      const url = `http://127.0.0.1:8000/songs/preview?track_name=${encodeURIComponent(song.track_name)}&artist=${encodeURIComponent(song.artists)}`;
+      const url = `${API_URL}/songs/preview?track_name=${encodeURIComponent(song.track_name)}&artist=${encodeURIComponent(song.artists)}`;
       const res = await fetch(url);
       const json = await res.json();
       
@@ -75,13 +76,16 @@ export const PlaybackProvider = ({ children }) => {
     }
   };
 
-  // Sync Audio Playback
+  // Sync Audio Playback (race-safe: stale previews are discarded via `active` flag)
   useEffect(() => {
+    let active = true;
     if (!audioRef.current) return;
 
     if (currentSong && currentSong.track_id) {
       const applyPlayback = async () => {
         const deezerUrl = await fetchDeezerPreview(currentSong);
+        if (!active) return; // Song changed while we were fetching — discard
+
         setPreviewUrl(deezerUrl);
 
         if (!deezerUrl) {
@@ -110,6 +114,10 @@ export const PlaybackProvider = ({ children }) => {
     } else {
       audioRef.current.pause();
     }
+
+    return () => {
+      active = false; // Cleanup: invalidate this effect's async work
+    };
   }, [currentSong, isPlaying]);
 
   // Sync Volume
