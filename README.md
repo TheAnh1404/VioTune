@@ -60,29 +60,77 @@ VioTune/
 
 ---
 
-## ⚡ Quick Start
+## ⚡ How to Build & Run (Hướng dẫn khởi chạy dự án)
 
-### Backend Setup
-1. Navigate to the `recommendation` directory.
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Run the FastAPI server:
-   ```bash
-   uvicorn api.app:app --reload
-   ```
+Dưới đây là hướng dẫn chi tiết để thiết lập và khởi chạy cả Backend (FastAPI) và Frontend (React) trên máy tính của bạn (đặc biệt tối ưu hóa cho hệ điều hành Windows).
 
-### Frontend Setup
-1. Navigate to the `frontend` directory.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm start
-   ```
+---
+
+### 1. Khởi chạy Backend (Recommendation Service)
+
+Dự án sử dụng môi trường ảo Python (`.venv`) đặt ở thư mục gốc của project để quản lý các thư viện.
+
+#### Bước 1: Mở Terminal và di chuyển vào thư mục backend
+```bash
+cd recommendation
+```
+
+#### Bước 2: Kích hoạt môi trường ảo (Python Virtual Environment)
+Tùy thuộc vào Command Line bạn đang sử dụng trên Windows, hãy chọn lệnh tương ứng:
+
+*   **Nếu dùng PowerShell (Khuyên dùng)**:
+    ```powershell
+    ..\.venv\Scripts\Activate.ps1
+    ```
+    *(Lưu ý: Nếu PowerShell báo lỗi Execution Policy, hãy chạy lệnh `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` trước).*
+    
+*   **Nếu dùng Command Prompt (cmd)**:
+    ```cmd
+    ..\.venv\Scripts\activate.bat
+    ```
+    
+*   **Nếu dùng Git Bash / Linux / macOS**:
+    ```bash
+    source ../.venv/bin/activate
+    ```
+
+#### Bước 3: Cài đặt các thư viện (chỉ thực hiện lần đầu tiên)
+```bash
+pip install -r requirements.txt
+```
+
+#### Bước 4: Khởi chạy FastAPI Server
+*   **Nếu đã kích hoạt môi trường ảo**:
+    ```bash
+    uvicorn api.app:app --reload
+    ```
+*   **Hoặc có thể chạy trực tiếp (không cần kích hoạt môi trường ảo)**:
+    ```powershell
+    ..\.venv\Scripts\uvicorn api.app:app --reload
+    ```
+
+*Khi khởi chạy thành công, API backend sẽ hoạt động tại địa chỉ: `http://127.0.0.1:8000`*
+
+---
+
+### 2. Khởi chạy Frontend (React Application)
+
+#### Bước 1: Mở một cửa sổ Terminal mới và di chuyển vào thư mục frontend
+```bash
+cd frontend
+```
+
+#### Bước 2: Cài đặt các thư viện phụ thuộc (chỉ thực hiện lần đầu tiên)
+```bash
+npm install
+```
+
+#### Bước 3: Khởi chạy React Development Server
+```bash
+npm start
+```
+
+*Khi khởi chạy thành công, ứng dụng web sẽ tự động mở trên trình duyệt tại địa chỉ: `http://localhost:3000`*
 
 ---
 

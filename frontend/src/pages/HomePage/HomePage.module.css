@@ -12,31 +12,20 @@
   position: relative;
 }
 
-/* Moving ambient glowing spheres behind the glass layout */
-.homeContainer::before, .homeContainer::after {
-  content: "";
+/* Ambient glow from current song accent color */
+.ambientGlow {
   position: absolute;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  filter: blur(150px);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle at 20% 30%, var(--accent-glow) 0%, transparent 40%),
+              radial-gradient(circle at 80% 70%, var(--accent-glow) 0%, transparent 40%);
+  opacity: 0.4;
   z-index: 0;
-  opacity: 0.15;
   pointer-events: none;
-  animation: floatGlow 12s infinite ease-in-out;
-}
-
-.homeContainer::before {
-  top: 10%;
-  left: 20%;
-  background: var(--accent-primary);
-}
-
-.homeContainer::after {
-  bottom: 15%;
-  right: 15%;
-  background: var(--accent-secondary);
-  animation-delay: -6s;
+  transition: background 1.5s ease-in-out;
 }
 
 .contentWrapper {
@@ -71,21 +60,16 @@
   border: 1px solid var(--glass-border);
 }
 
-.mainContent::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary);
-  box-shadow: var(--neon-glow-primary);
-}
-
 .dashboardLayout {
   display: flex;
   flex-direction: column;
   gap: 32px;
-  max-width: 1300px;
+  max-width: 1400px;
   width: 100%;
   margin: 0 auto;
 }
 
-/* Welcome Panel with Taste profile */
+/* Welcome Panel */
 .welcomePanel {
   padding: 32px;
   display: flex;
@@ -101,17 +85,14 @@
   font-size: 32px;
   font-weight: 800;
   margin-bottom: 8px;
-  letter-spacing: -0.5px;
 }
 
 .welcomeText p {
   color: var(--text-secondary);
-  font-size: 16px;
 }
 
 .tasteProfileSummary {
   display: flex;
-  flex-direction: row;
   gap: 16px;
 }
 
@@ -125,39 +106,23 @@
   border: 1px solid var(--glass-border);
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
 }
 
-.tastePill svg {
-  color: var(--accent-secondary);
-}
-
-/* Main Split View: AI Engine vs Content Grid */
+/* Grid Layout */
 .splitGrid {
   display: grid;
-  grid-template-columns: 460px 1fr;
+  grid-template-columns: 480px 1fr;
   gap: 24px;
   align-items: start;
 }
 
-/* AI Recommendation Station Control Card */
 .aiStationCard {
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  position: relative;
-  overflow: hidden;
-}
-
-.aiStationCard::before {
-  content: "";
-  position: absolute;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
 }
 
 .cardHeader {
@@ -170,192 +135,113 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
   background: rgba(139, 92, 246, 0.15);
   color: var(--accent-primary);
-  box-shadow: var(--neon-glow-primary);
 }
 
-.cardHeaderInfo h3 {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.cardHeaderInfo p {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-/* DNA Metrics list */
-.dnaMetricsList {
+/* DNA Section with Radar */
+.dnaSection {
+  min-height: 250px;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
 }
 
-.dnaItem {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.dnaLabel {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.dnaValue {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.dnaBarTrack {
-  height: 6px;
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.05);
-  overflow: hidden;
-}
-
-.dnaBarFill {
-  height: 100%;
-  border-radius: 30px;
-  background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-  transition: width 0.8s ease-in-out;
-}
-
-/* Hybrid Tuner Settings */
+/* Hybrid Tuner with Multi-Seed */
 .hybridTuner {
-  padding: 16px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .tunerHeader {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+}
+
+.seedSelectGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .tunerLabel {
   font-size: 11px;
   color: var(--text-muted);
   text-transform: uppercase;
-}
-
-.rangeInput {
-  -webkit-appearance: none;
-  width: 100%;
-  height: 4px;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.1);
-  outline: none;
-  cursor: pointer;
-}
-
-.rangeInput::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent-secondary);
-  box-shadow: var(--neon-glow-secondary);
-  transition: transform 0.1s;
-}
-
-.rangeInput::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-.tunerLabelRow {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
 }
 
-.retrainSection {
+.seedPillList {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.retrainBtn {
+.seedPill {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  color: #c4b5fd;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--accent-primary);
+  color: white;
+  border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+}
+
+.seedPillTitle {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.removeSeed {
   cursor: pointer;
-  transition: all 0.2s;
+  opacity: 0.7;
 }
 
-.retrainBtn:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: var(--neon-glow-primary);
+.removeSeed:hover {
+  opacity: 1;
 }
 
-.retrainStatus {
-  font-size: 11px;
-  color: var(--accent-secondary);
-  margin-top: 4px;
-}
-
-/* Seed Song Selection Group */
-.seedSelectGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.noSeedText {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .seedSearchWrapper {
   position: relative;
-  display: flex;
-  align-items: center;
 }
 
 .seedSearchIcon {
   position: absolute;
   left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-muted);
 }
 
 .seedSearchInput {
   width: 100%;
   padding: 10px 12px 10px 36px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0,0,0,0.3);
   border: 1px solid var(--glass-border);
-  color: var(--text-primary);
+  border-radius: 10px;
+  color: white;
   font-size: 13px;
-  outline: none;
-  transition: all 0.2s;
-}
-
-.seedSearchInput:focus {
-  border-color: var(--accent-secondary);
-  box-shadow: var(--neon-glow-secondary);
 }
 
 .seedSearchDropdown {
@@ -363,42 +249,35 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: var(--bg-nav);
+  background: #1a1a2e;
   border: 1px solid var(--glass-border);
   border-radius: 10px;
-  margin-top: 6px;
+  margin-top: 5px;
   max-height: 200px;
   overflow-y: auto;
-  z-index: 50;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  z-index: 10;
 }
 
 .dropdownItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 10px;
   cursor: pointer;
-  transition: background 0.2s;
 }
 
 .dropdownItem:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255,255,255,0.05);
 }
 
 .dropdownInfo {
   display: flex;
   flex-direction: column;
-  min-width: 0;
 }
 
 .dropdownTitle {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .dropdownArtist {
@@ -406,7 +285,60 @@
   color: var(--text-secondary);
 }
 
-/* AI Generated playlist area */
+/* Preset Buttons */
+.presetGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.presetBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  background: var(--glass-highlight);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.presetBtn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: var(--accent-secondary);
+}
+
+.rangeInput {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  outline: none;
+}
+
+.rangeInput::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-secondary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--accent-secondary);
+}
+
+.tunerLabelRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* AI Recommendation List */
 .aiRecsWrapper {
   display: flex;
   flex-direction: column;
@@ -435,21 +367,18 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
+  padding: 10px;
   cursor: pointer;
-  position: relative;
-  transition: all 0.2s;
+  border-radius: 12px;
 }
 
 .recRow:hover {
   background: var(--glass-highlight);
-  border-color: rgba(255, 255, 255, 0.1);
-  transform: translateX(4px);
 }
 
 .recRow img {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
   object-fit: cover;
 }
@@ -462,26 +391,16 @@
 }
 
 .recName {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .recArtist {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.recRowActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .likeBtn {
@@ -489,93 +408,61 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 6px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.likeBtn:hover {
-  color: var(--accent-danger);
-  background: rgba(239, 68, 68, 0.05);
 }
 
 .liked {
   color: var(--accent-danger) !important;
 }
 
-/* Right Column Panels */
+/* Right Content Grids */
 .rightCol {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 40px;
 }
 
-/* Sections inside Dashboard */
 .sectionTitle {
-  font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
-.titleIconGlow {
-  color: var(--accent-secondary);
-}
-
-/* Hot Track Grid */
 .trackGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
 }
 
 .trackCard {
   padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
   cursor: pointer;
-  position: relative;
+  transition: transform 0.3s;
 }
 
 .trackCard:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  transform: translateY(-8px);
 }
 
 .imageContainer {
   position: relative;
-  width: 100%;
-  aspect-ratio: 1;
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.01);
+  aspect-ratio: 1;
 }
 
 .imageContainer img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.trackCard:hover .imageContainer img {
-  transform: scale(1.08);
 }
 
 .playOverlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(0,0,0,0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -588,210 +475,120 @@
 }
 
 .playIconCircle {
+  width: 48px;
+  height: 48px;
+  background: var(--accent-primary);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--accent-primary);
-  color: white;
-  box-shadow: var(--neon-glow-primary);
-  transform: scale(0.8);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.trackCard:hover .playIconCircle {
-  transform: scale(1);
+  box-shadow: 0 0 20px var(--accent-primary);
 }
 
 .trackDetails {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  margin-top: 12px;
 }
 
 .trackNameText {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary);
   margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .trackArtistText {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.genreBadge {
-  align-self: flex-start;
-  margin-top: 6px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--accent-secondary);
-  background: rgba(6, 182, 212, 0.08);
-  border: 1px solid rgba(6, 182, 212, 0.15);
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-/* Curated Playlists Slider */
+/* Playlists */
 .playlistGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .playlistCard {
-  padding: 20px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
+  padding: 20px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--glass-border);
-}
-
-.playlistCard:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.12);
-  transform: scale(1.02);
 }
 
 .playlistIconBox {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  background: var(--accent-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-  color: white;
 }
 
 .playlistInfo h4 {
-  font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .playlistInfo p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
-/* Followed Artists Circular Row */
-.artistRow {
-  display: flex;
-  flex-direction: row;
-  gap: 24px;
-  overflow-x: auto;
-  padding: 8px 0;
+/* Animations & Utilities */
+@keyframes rotateDisk {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.artistRow::-webkit-scrollbar {
-  height: 4px;
+.spinning {
+  animation: rotateDisk 1.5s linear infinite;
 }
 
-.artistRow::-webkit-scrollbar-thumb {
-  background: var(--glass-highlight);
-  border-radius: 4px;
-}
-
-.artistCircularCard {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+.retrainBtn {
+  background: transparent;
+  border: 1px solid var(--accent-primary);
+  color: var(--accent-primary);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
   cursor: pointer;
-  flex-shrink: 0;
-  width: 100px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.artistAvatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid var(--glass-border);
-  transition: all 0.3s;
+.retrainBtn:hover {
+  background: var(--accent-primary);
+  color: white;
 }
 
-.artistAvatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.retrainStatus {
+  font-size: 11px;
+  color: var(--accent-secondary);
+  text-align: right;
 }
 
-.artistCircularCard:hover .artistAvatar {
-  border-color: var(--accent-secondary);
-  box-shadow: var(--neon-glow-secondary);
-  transform: scale(1.05);
-}
-
-.artistNameText {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-}
-
-/* Queue Drawer */
 .queueDrawer {
   position: fixed;
-  top: 90px;
+  top: 80px;
+  bottom: 110px;
   right: -400px;
-  bottom: 100px;
-  width: 360px;
-  z-index: 999;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  border-radius: 20px;
+  width: 350px;
+  z-index: 100;
+  transition: right 0.3s ease;
 }
 
 .queueDrawerOpen {
-  right: 24px;
+  right: 20px;
 }
 
-/* Shimmer/Loading state */
-.spinning {
-  animation: rotateDisk 1.2s linear infinite;
-}
-
-.loadingWrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: var(--text-secondary);
-}
-
-/* Responsive Media Queries */
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .splitGrid {
     grid-template-columns: 1fr;
   }
-}
-
-@media (max-width: 768px) {
-  .welcomePanel {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 20px;
-  }
-  
-  .mainContent {
-    padding: 16px;
+  .aiStationCard {
+    position: relative;
   }
 }

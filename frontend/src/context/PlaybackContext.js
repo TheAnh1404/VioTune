@@ -272,7 +272,8 @@ export const PlaybackProvider = ({ children }) => {
     prevSong,
     toggleRepeat,
     toggleShuffle,
-    clearQueue
+    clearQueue,
+    audioElement: audioRef.current
   };
 
   return (

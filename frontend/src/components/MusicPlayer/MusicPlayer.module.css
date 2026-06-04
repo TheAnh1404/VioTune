@@ -120,6 +120,12 @@
     justify-content: flex-end;
 }
 
+.visualizerContainer {
+    width: 100px;
+    height: 30px;
+    margin-right: 10px;
+}
+
 .volumeGroup {
     display: flex;
     align-items: center;

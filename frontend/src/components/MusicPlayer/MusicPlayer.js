@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styles from './MusicPlayer.module.css';
+import MusicVisualizer from '../MusicVisualizer/MusicVisualizer';
 import { 
   SkipBack, SkipForward, Pause, Play, 
   Repeat, Shuffle, ListMusic, Volume2, VolumeX 
@@ -54,7 +55,8 @@ const MusicPlayer = ({
   onVolumeChange,
   previewLoading = false,
   previewUrl = null,
-  onMaximize
+  onMaximize,
+  audioElement
 }) => {
   const songTitle = currentSong ? currentSong.track_name : "No song playing";
   const songArtist = currentSong ? currentSong.artists : "Select a song to start listening";
@@ -156,6 +158,9 @@ const MusicPlayer = ({
 
       {/* Cột phải: Volume và Tiện ích */}
       <div className={styles.utilities}>
+        <div className={styles.visualizerContainer}>
+          <MusicVisualizer audioElement={audioElement} isPlaying={isPlaying} />
+        </div>
         <ListMusic 
           size={20} 
           className={`${styles.icon} ${showQueue ? styles.activeIcon : ''}`} 

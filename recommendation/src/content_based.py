@@ -67,46 +67,56 @@ except ImportError:
 
 # ===== RECOMMEND FUNCTION =====
 def recommend(song_id, top_n=5):
-    # 1. Tìm bài hát gốc
-    idx_list = songs[songs["track_id"] == song_id].index
-    if len(idx_list) == 0:
-        return "Không tìm thấy bài hát này."
-    
-    idx = idx_list[0]
-    song_feature = scaled_features[idx].reshape(1, -1)
+    return recommend_multi([song_id], top_n)
 
-    # 2. Tìm láng giềng gần nhất dựa trên âm thanh (Audio Features)
+def recommend_multi(song_ids, top_n=5):
+    if not song_ids:
+        return "Danh sách hạt giống trống."
+    
+    # 1. Tìm các bài hát hạt giống và tính vector trung bình
+    valid_indices = []
+    for sid in song_ids:
+        idx_list = songs[songs["track_id"] == sid].index
+        if len(idx_list) > 0:
+            valid_indices.append(idx_list[0])
+            
+    if not valid_indices:
+        return "Không tìm thấy bất kỳ bài hát hạt giống nào."
+    
+    # Lấy vector đặc trưng của các bài hạt giống và tính trung bình
+    seed_features = scaled_features[valid_indices]
+    mean_feature = np.mean(seed_features, axis=0).reshape(1, -1)
+
+    # 2. Tìm láng giềng gần nhất dựa trên trung bình đặc trưng
     if use_annoy:
-        # Annoy returns (indices, angular_distances)
-        # Angular distance in Annoy is d = sqrt(2 * (1 - cosine_similarity))
-        # Therefore, cosine_distance = d^2 / 2
-        indices, angular_distances = annoy_index.get_nns_by_vector(song_feature.flatten(), N_NEIGHBORS_TO_SEARCH, include_distances=True)
+        indices, angular_distances = annoy_index.get_nns_by_vector(mean_feature.flatten(), N_NEIGHBORS_TO_SEARCH, include_distances=True)
         neighbor_indices = np.array(indices)
         distances = np.array([float(d)**2 / 2.0 for d in angular_distances])
     else:
-        # Scikit-learn brute-force NearestNeighbors fallback
-        distances, indices = nn_model.kneighbors(song_feature)
+        distances, indices = nn_model.kneighbors(mean_feature)
         distances = distances.flatten()
         neighbor_indices = indices.flatten()
     
     # 3. Chấm điểm kết hợp (Metadata Scoring/Reranking)
-    target_genre = songs.iloc[idx]["track_genre"]
-    target_artists = set(str(songs.iloc[idx]["artists"]).split(";"))
+    # Lấy genres và artists của tất cả hạt giống để boost
+    target_genres = set(songs.iloc[valid_indices]["track_genre"])
+    target_artists = set()
+    for art_str in songs.iloc[valid_indices]["artists"]:
+        target_artists.update(str(art_str).split(";"))
     
     final_scores = np.zeros(len(neighbor_indices))
+    seed_ids_set = set(song_ids)
     
     for i, n_idx in enumerate(neighbor_indices):
-        if n_idx == idx:
-            final_scores[i] = -1.0 # Bỏ qua bài đang xét
+        neighbor_song = songs.iloc[n_idx]
+        if neighbor_song["track_id"] in seed_ids_set:
+            final_scores[i] = -1.0 # Bỏ qua các bài hạt giống
             continue
             
-        # Cosine Similarity = 1 - Cosine Distance
         score = 1.0 - distances[i]
         
-        neighbor_song = songs.iloc[n_idx]
-        
         # Boost 1: Khớp thể loại (+0.1)
-        if neighbor_song["track_genre"] == target_genre:
+        if neighbor_song["track_genre"] in target_genres:
             score += 0.1
             
         # Boost 2: Khớp nghệ sĩ (+0.15)
@@ -115,15 +125,13 @@ def recommend(song_id, top_n=5):
             score += 0.15
             
         # Boost 3: Độ phủ sóng (+0.05 max)
-        # Giúp ưu tiên các bài hát nổi tiếng nếu 2 bài nghe giống hệt nhau
         pop_boost = (neighbor_song["popularity"] / 100.0) * 0.05
         score += pop_boost
         
         final_scores[i] = score
 
     # 4. Trả về Top N
-    # argsort sắp xếp từ thấp lên cao -> dùng [-top_n:] để lấy n max -> [::-1] để đảo chiều
     sorted_relative_idx = final_scores.argsort()[-top_n:][::-1]
     best_candidate_idx = neighbor_indices[sorted_relative_idx]
 
-    return songs.iloc[best_candidate_idx][["track_name", "artists", "track_genre", "popularity"]]
+    return songs.iloc[best_candidate_idx][["track_id", "track_name", "artists", "track_genre", "popularity"]]

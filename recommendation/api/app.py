@@ -30,7 +30,7 @@ import uuid
 import datetime
 
 from src.hybrid import hybrid_recommend
-from src.content_based import recommend as content_recommend
+from src.content_based import recommend_multi as content_recommend_multi
 from src.collaborative import recommend_cf
 from api.db import get_db_connection
 import api.firebase_db as fdb
@@ -525,7 +525,8 @@ def trigger_retrain(background_tasks: BackgroundTasks):
 @app.get("/recommend")
 def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), alpha: float = Query(0.5, ge=0.0, le=1.0)):
     try:
-        result = hybrid_recommend(user_id=user_id, song_id=song_id, top_n=top_n, alpha=alpha)
+        song_ids = [s.strip() for s in song_id.split(",") if s.strip()]
+        result = hybrid_recommend(user_id=user_id, song_ids=song_ids, top_n=top_n, alpha=alpha)
         if isinstance(result, str): # Error message from inner function
             raise HTTPException(status_code=404, detail=result)
         return {"status": "success", "data": result}
@@ -538,7 +539,8 @@ def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), al
 @app.get("/recommend/content")
 def recommend_content(song_id: str, top_n: int = Query(5, ge=1, le=50)):
     try:
-        result_df = content_recommend(song_id, top_n=top_n)
+        song_ids = [s.strip() for s in song_id.split(",") if s.strip()]
+        result_df = content_recommend_multi(song_ids, top_n=top_n)
         if isinstance(result_df, str):
             raise HTTPException(status_code=404, detail=result_df)
         

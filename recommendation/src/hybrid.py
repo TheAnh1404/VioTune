@@ -1,19 +1,22 @@
-from src.content_based import recommend as content_recommend
+from src.content_based import recommend_multi
 from src.collaborative import recommend_cf
 
 # ===== HYBRID FUNCTION =====
-def hybrid_recommend(user_id, song_id, top_n=5, alpha=0.5):
+def hybrid_recommend(user_id, song_ids, top_n=5, alpha=0.5):
     """
     Hệ thống gợi ý Hybrid: Kết hợp Content-Based và Collaborative Filtering.
 
-    user_id : Dùng cho CF (SVD Matrix Factorization)
-    song_id : Dùng cho Content-Based (KNN + Cosine Similarity)
-    alpha   : Trọng số của Content-Based (0 → 1). CF nhận trọng số (1 - alpha).
+    user_id  : Dùng cho CF (SVD Matrix Factorization)
+    song_ids : Danh sách track_id dùng làm hạt giống cho Content-Based
+    alpha    : Trọng số của Content-Based (0 → 1). CF nhận trọng số (1 - alpha).
     """
     beta = 1 - alpha
 
     # ===== LẤY KẾT QUẢ TỪ HAI MÔ HÌNH =====
-    content_df = content_recommend(song_id, top_n=20)
+    # Content-Based dùng multi-seed
+    content_df = recommend_multi(song_ids, top_n=20)
+    
+    # Collaborative Filtering gợi ý dựa trên user profile
     cf_result = recommend_cf(user_id, top_n=20)
 
     # Xử lý lỗi Content-Based
@@ -36,24 +39,28 @@ def hybrid_recommend(user_id, song_id, top_n=5, alpha=0.5):
 
     # Điểm từ Content-Based
     for _, row in content_df.iterrows():
-        key = row["track_name"]
+        key = row["track_id"]
         combined[key] = {
+            "track_name": row["track_name"],
             "artists": row["artists"],
             "genre": row["track_genre"],
+            "popularity": row["popularity"],
             "score": alpha * row["score"]
         }
 
     # Điểm từ Collaborative Filtering (nếu có)
     if cf_available:
         for _, row in cf_df.iterrows():
-            key = row["track_name"]
+            key = row["track_id"]
             if key in combined:
                 # Bài xuất hiện ở cả hai model → Cộng điểm thưởng
                 combined[key]["score"] += beta * row["score"]
             else:
                 combined[key] = {
+                    "track_name": row["track_name"],
                     "artists": row["artists"],
                     "genre": row["track_genre"],
+                    "popularity": row["popularity"],
                     "score": beta * row["score"]
                 }
 
@@ -61,11 +68,13 @@ def hybrid_recommend(user_id, song_id, top_n=5, alpha=0.5):
     sorted_songs = sorted(combined.items(), key=lambda x: x[1]["score"], reverse=True)
 
     result = []
-    for name, info in sorted_songs[:top_n]:
+    for tid, info in sorted_songs[:top_n]:
         result.append({
-            "track_name": name,
+            "track_id": tid,
+            "track_name": info["track_name"],
             "artists": info["artists"],
-            "track_genre": info["genre"]
+            "track_genre": info["genre"],
+            "popularity": info["popularity"]
         })
 
     return result

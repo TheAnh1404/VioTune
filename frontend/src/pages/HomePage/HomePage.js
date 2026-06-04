@@ -10,10 +10,11 @@ import ErrorBoundary from '../../components/ErrorBoundary/ErrorBoundary';
 import { useAuth } from '../../context/AuthContext';
 import { usePlayback } from '../../context/PlaybackContext';
 import { API_URL } from '../../config';
+import AcousticDNARadar from '../../components/AcousticDNARadar/AcousticDNARadar';
 import { 
   Sparkles, Sliders, Cpu, Heart, Play, RefreshCw, 
   Search, Music, Activity, Flame, Library, Music2, 
-  ArrowRight, Radio, Star, Layers, Disc
+  ArrowRight, Radio, Star, Layers, Disc, X, Zap, Coffee, Brain
 } from 'lucide-react';
 
 const getCoverImage = (trackId) => {
@@ -57,7 +58,8 @@ const HomePage = () => {
     previewUrl, previewLoading,
     showQueue, setShowQueue,
     playSong, togglePlay, seek,
-    nextSong, prevSong, toggleRepeat, toggleShuffle, clearQueue
+    nextSong, prevSong, toggleRepeat, toggleShuffle, clearQueue,
+    audioElement
   } = usePlayback();
 
   // ── Core Dashboard States ─────────────────────────────────────────────────────
@@ -69,7 +71,7 @@ const HomePage = () => {
   
   // ── AI recommendation States ──────────────────────────────────────────────────
   const [alpha, setAlpha] = useState(0.5);
-  const [seedSong, setSeedSong] = useState(null);
+  const [seedSongs, setSeedSongs] = useState([]); // Array of up to 3 songs
   const [recs, setRecs] = useState([]);
   const [taste, setTaste] = useState(null);
   const [loadingRecs, setLoadingRecs] = useState(false);
@@ -82,6 +84,9 @@ const HomePage = () => {
   // Model retrain state
   const [retrainStatus, setRetrainStatus] = useState("");
   const [retrainLoading, setRetrainLoading] = useState(false);
+
+  // Dynamic Accent Glow State
+  const [accentColor, setAccentColor] = useState('rgba(139, 92, 246, 0.15)'); // Default purple glow
 
   // ── 1. Initial Data Fetching on Mount ─────────────────────────────────────────
   useEffect(() => {
@@ -136,17 +141,15 @@ const HomePage = () => {
 
   // ── 2. Sync Seed Song with Active Song or Fetch Default ───────────────────────
   useEffect(() => {
-    if (currentSong) {
-      setSeedSong(currentSong);
-      setSeedQuery(currentSong.track_name);
-    } else if (!seedSong) {
+    if (currentSong && seedSongs.length === 0) {
+      setSeedSongs([currentSong]);
+    } else if (seedSongs.length === 0) {
       const fetchDefaultSeed = async () => {
         try {
           const res = await fetch(`${API_URL}/songs/random?limit=1`);
           const json = await res.json();
           if (json.status === "success" && json.data.length > 0) {
-            setSeedSong(json.data[0]);
-            setSeedQuery(json.data[0].track_name);
+            setSeedSongs([json.data[0]]);
           }
         } catch (err) {
           console.error("Failed to load default seed:", err);
@@ -174,34 +177,45 @@ const HomePage = () => {
     }
   }, [userId, likedSongs?.length]);
 
-  // ── 4. Search Seeds on Debounced input ────────────────────────────────────────
+  // ── 4. Search Seeds with AbortController ──────────────────────────────────────
   useEffect(() => {
-    if (!seedQuery.trim() || seedQuery === seedSong?.track_name) {
+    if (!seedQuery.trim()) {
       setSeedSearchResults([]);
       return;
     }
+    
+    const controller = new AbortController();
     const delayDebounce = setTimeout(async () => {
       try {
-        const res = await fetch(`${API_URL}/songs/search?q=${encodeURIComponent(seedQuery)}&limit=5`);
+        const res = await fetch(
+          `${API_URL}/songs/search?q=${encodeURIComponent(seedQuery)}&limit=5`,
+          { signal: controller.signal }
+        );
         const json = await res.json();
         if (json.status === "success") {
           setSeedSearchResults(json.data);
         }
       } catch (err) {
-        console.error("Search seed failed:", err);
+        if (err.name !== 'AbortError') {
+          console.error("Search seed failed:", err);
+        }
       }
-    }, 300);
+    }, 400);
 
-    return () => clearTimeout(delayDebounce);
-  }, [seedQuery, seedSong]);
+    return () => {
+      clearTimeout(delayDebounce);
+      controller.abort();
+    };
+  }, [seedQuery]);
 
-  // ── 5. Fetch Hybrid Recommendations ───────────────────────────────────────────
+  // ── 5. Fetch Hybrid Recommendations (Multi-Seed) ─────────────────────────────
   useEffect(() => {
     const fetchRecommendations = async () => {
-      if (!userId || !seedSong) return;
+      if (!userId || seedSongs.length === 0) return;
       setLoadingRecs(true);
       try {
-        const res = await fetch(`${API_URL}/recommend?user_id=${userId}&song_id=${seedSong.track_id}&alpha=${alpha}&top_n=6`);
+        const ids = seedSongs.map(s => s.track_id).join(',');
+        const res = await fetch(`${API_URL}/recommend?user_id=${userId}&song_id=${ids}&alpha=${alpha}&top_n=6`);
         const json = await res.json();
         if (json.status === "success") {
           const tracks = json.data.map(track => {
@@ -222,13 +236,41 @@ const HomePage = () => {
     };
 
     fetchRecommendations();
-  }, [userId, seedSong, alpha]);
+  }, [userId, seedSongs, alpha]);
+
+  // ── 6. Dynamic Accent Glow Effect ───────────────────────────────────────────
+  useEffect(() => {
+    if (!currentSong) return;
+    
+    // Simulating color extraction from cover URL
+    const colors = [
+      'rgba(139, 92, 246, 0.2)', // Purple
+      'rgba(6, 182, 212, 0.2)',  // Cyan
+      'rgba(236, 72, 153, 0.2)', // Pink
+      'rgba(245, 158, 11, 0.2)', // Amber
+      'rgba(16, 185, 129, 0.2)'  // Emerald
+    ];
+    
+    const hash = currentSong.track_name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    setAccentColor(colors[hash % colors.length]);
+  }, [currentSong]);
 
   // ── Tuner Actions ─────────────────────────────────────────────────────────────
-  const selectSeed = (song) => {
-    setSeedSong(song);
-    setSeedQuery(song.track_name);
+  const addSeed = (song) => {
+    if (seedSongs.length >= 3) {
+      // Remove first and add new (sliding window of 3)
+      setSeedSongs(prev => [...prev.slice(1), song]);
+    } else {
+      if (!seedSongs.find(s => s.track_id === song.track_id)) {
+        setSeedSongs(prev => [...prev, song]);
+      }
+    }
+    setSeedQuery("");
     setShowSeedDropdown(false);
+  };
+
+  const removeSeed = (trackId) => {
+    setSeedSongs(prev => prev.filter(s => s.track_id !== trackId));
   };
 
   const handleRetrain = async () => {
@@ -248,14 +290,6 @@ const HomePage = () => {
     }
   };
 
-  const getAlphaLabel = () => {
-    if (alpha === 0) return "100% SVD Collaborative Filtering";
-    if (alpha === 1) return "100% KNN Content-Based";
-    if (alpha === 0.5) return "Đồng bộ cân bằng Hybrid (50% / 50%)";
-    return `Cơ chế kết hợp Hybrid (Content: ${(alpha * 100).toFixed(0)}% | SVD: ${((1 - alpha) * 100).toFixed(0)}%)`;
-  };
-
-  // ── Audio control proxies ─────────────────────────────────────────────────────
   const handlePlaySong = (song, songList = []) => {
     let targetQueue = songList;
     if (!targetQueue || targetQueue.length === 0) {
@@ -272,7 +306,6 @@ const HomePage = () => {
 
     playSong(song, targetQueue);
     
-    // Add to local recent history state optimistically
     setRecentSongs(prev => {
       const filtered = prev.filter(s => s.track_id !== song.track_id);
       return [song, ...filtered].slice(0, 5);
@@ -298,8 +331,6 @@ const HomePage = () => {
       if (json.status === "success") {
         setPlaylistSongs(json.data);
         setPlaylistTitle(playlistName);
-        
-        // Load target queue and play immediately
         if (json.data.length > 0) {
           playSong(json.data[0], json.data);
           navigate('/player');
@@ -320,7 +351,9 @@ const HomePage = () => {
   };
 
   return (
-    <div className={styles.homeContainer}>
+    <div className={styles.homeContainer} style={{ '--accent-glow': accentColor }}>
+      <div className={styles.ambientGlow} />
+      
       <Header 
         username={username} 
         onLogOut={handleLogOut}
@@ -338,7 +371,6 @@ const HomePage = () => {
         <div className={styles.mainContent}>
           <div className={styles.dashboardLayout}>
             
-            {/* 1. WELCOME HERO SECTION */}
             <div className={`${styles.welcomePanel} glass-panel`}>
               <div className={styles.welcomeText}>
                 <h1>Chào mừng trở lại, <span className="gradient-text-purple-cyan">{username}</span>!</h1>
@@ -360,10 +392,8 @@ const HomePage = () => {
               </div>
             </div>
 
-            {/* 2. DUAL LAYOUT: AI recommendation engine on left, dynamic grids on right */}
             <div className={styles.splitGrid}>
               
-              {/* LEFT: AI Recommendation Engine */}
               <div className={`${styles.aiStationCard} glass-panel`}>
                 <div className={styles.cardHeader}>
                   <div className={styles.cardHeaderIcon}>
@@ -375,50 +405,9 @@ const HomePage = () => {
                   </div>
                 </div>
 
-                {/* Acoustic DNA Profile */}
-                <div className={styles.dnaMetricsList}>
+                <div className={styles.dnaSection}>
                   {taste ? (
-                    <>
-                      <div className={styles.dnaItem}>
-                        <div className={styles.dnaLabel}>
-                          <span>Danceability (Nhịp điệu sôi động)</span>
-                          <span className={styles.dnaValue}>{(taste.danceability * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className={styles.dnaBarTrack}>
-                          <div className={styles.dnaBarFill} style={{ width: `${taste.danceability * 100}%` }} />
-                        </div>
-                      </div>
-
-                      <div className={styles.dnaItem}>
-                        <div className={styles.dnaLabel}>
-                          <span>Energy (Cường độ âm thanh)</span>
-                          <span className={styles.dnaValue}>{(taste.energy * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className={styles.dnaBarTrack}>
-                          <div className={styles.dnaBarFill} style={{ width: `${taste.energy * 100}%` }} />
-                        </div>
-                      </div>
-
-                      <div className={styles.dnaItem}>
-                        <div className={styles.dnaLabel}>
-                          <span>Valence (Cảm xúc vui tươi)</span>
-                          <span className={styles.dnaValue}>{(taste.valence * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className={styles.dnaBarTrack}>
-                          <div className={styles.dnaBarFill} style={{ width: `${taste.valence * 100}%` }} />
-                        </div>
-                      </div>
-
-                      <div className={styles.dnaItem}>
-                        <div className={styles.dnaLabel}>
-                          <span>Acousticness (Nhạc cụ mộc)</span>
-                          <span className={styles.dnaValue}>{(taste.acousticness * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className={styles.dnaBarTrack}>
-                          <div className={styles.dnaBarFill} style={{ width: `${taste.acousticness * 100}%` }} />
-                        </div>
-                      </div>
-                    </>
+                    <AcousticDNARadar data={taste} />
                   ) : (
                     <div className={styles.loadingWrapper}>
                       <span className={styles.spinning}>⟳</span> &nbsp; Đang giải mã Acoustic DNA...
@@ -426,16 +415,25 @@ const HomePage = () => {
                   )}
                 </div>
 
-                {/* Hybrid Fusion Tuner controls */}
                 <div className={styles.hybridTuner}>
                   <div className={styles.tunerHeader}>
                     <span>Bộ chỉnh luồng thuật toán</span>
                     <span style={{ color: 'var(--accent-secondary)' }}><Sliders size={16} /></span>
                   </div>
 
-                  {/* Seed Song Input */}
                   <div className={styles.seedSelectGroup}>
-                    <div className={styles.tunerLabel}>Hạt giống KNN Content-based:</div>
+                    <div className={styles.tunerLabel}>Hộp Hạt Giống (Tối đa 3 bài):</div>
+                    
+                    <div className={styles.seedPillList}>
+                      {seedSongs.map(song => (
+                        <div key={song.track_id} className={styles.seedPill}>
+                          <span className={styles.seedPillTitle}>{song.track_name}</span>
+                          <X size={12} className={styles.removeSeed} onClick={() => removeSeed(song.track_id)} />
+                        </div>
+                      ))}
+                      {seedSongs.length === 0 && <span className={styles.noSeedText}>Chưa chọn hạt giống...</span>}
+                    </div>
+
                     <div className={styles.seedSearchWrapper}>
                       <Search size={14} className={styles.seedSearchIcon} />
                       <input 
@@ -446,14 +444,14 @@ const HomePage = () => {
                           setShowSeedDropdown(true);
                         }}
                         onFocus={() => setShowSeedDropdown(true)}
-                        placeholder="Tìm bài hát làm hạt giống gợi ý..."
+                        placeholder="Thêm bài hát làm hạt giống..."
                         className={styles.seedSearchInput}
                       />
                       
                       {showSeedDropdown && seedSearchResults.length > 0 && (
                         <div className={styles.seedSearchDropdown}>
                           {seedSearchResults.map((song) => (
-                            <div key={song.track_id} className={styles.dropdownItem} onClick={() => selectSeed(song)}>
+                            <div key={song.track_id} className={styles.dropdownItem} onClick={() => addSeed(song)}>
                               <Music size={14} style={{ color: 'var(--accent-secondary)' }} />
                               <div className={styles.dropdownInfo}>
                                 <span className={styles.dropdownTitle}>{song.track_name}</span>
@@ -466,7 +464,18 @@ const HomePage = () => {
                     </div>
                   </div>
 
-                  {/* Range Slider for hybrid alpha blending */}
+                  <div className={styles.presetGroup}>
+                    <button className={styles.presetBtn} onClick={() => setAlpha(0.2)}>
+                      <Coffee size={14} /> Chill
+                    </button>
+                    <button className={styles.presetBtn} onClick={() => setAlpha(0.8)}>
+                      <Zap size={14} /> Energy
+                    </button>
+                    <button className={styles.presetBtn} onClick={() => setAlpha(0.5)}>
+                      <Brain size={14} /> Focus
+                    </button>
+                  </div>
+
                   <div className={styles.seedSelectGroup}>
                     <div className={styles.tunerLabelRow}>
                       <span>Collaborative SVD</span>
@@ -482,17 +491,9 @@ const HomePage = () => {
                       onChange={(e) => setAlpha(parseFloat(e.target.value))}
                       className={styles.rangeInput}
                     />
-                    <div className={styles.tunerLabelRow} style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '2px' }}>
-                      <span>Dựa trên sở thích người dùng</span>
-                      <span>Dựa trên đặc tính âm học bài hát</span>
-                    </div>
                   </div>
 
                   <div className={styles.retrainSection}>
-                    <div className={styles.tunerLabel} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Cpu size={12} />
-                      <span>SVD Latent: 50 Dimensions</span>
-                    </div>
                     <button className={styles.retrainBtn} onClick={handleRetrain} disabled={retrainLoading}>
                       <RefreshCw size={12} className={retrainLoading ? styles.spinning : ''} />
                       <span>Huấn luyện lại SVD</span>
@@ -501,10 +502,9 @@ const HomePage = () => {
                   {retrainStatus && <div className={styles.retrainStatus}>{retrainStatus}</div>}
                 </div>
 
-                {/* AI Rec List */}
                 <div className={styles.aiRecsWrapper}>
                   <div className={styles.recsHeader}>
-                    <h4>Danh sách gợi ý thông minh ({recs.length})</h4>
+                    <h4>Gợi ý thông minh cho bạn</h4>
                     {loadingRecs && <span className={styles.spinning}>⟳</span>}
                   </div>
 
@@ -537,10 +537,7 @@ const HomePage = () => {
                 </div>
               </div>
 
-              {/* RIGHT: Dynamic Grids */}
               <div className={styles.rightCol}>
-                
-                {/* Hot Tracks Trending Now */}
                 <section>
                   <h2 className={styles.sectionTitle}>
                     <Flame className={styles.titleIconGlow} size={22} /> Giai Điệu Thịnh Hành
@@ -574,7 +571,6 @@ const HomePage = () => {
                   </div>
                 </section>
 
-                {/* Curated Genre Playlists */}
                 <section>
                   <h2 className={styles.sectionTitle}>
                     <Radio className={styles.titleIconGlow} size={22} /> Khám Phá Chủ Đề & Thể Loại
@@ -586,7 +582,7 @@ const HomePage = () => {
                       </div>
                       <div className={styles.playlistInfo}>
                         <h4>Lofi Chill-out</h4>
-                        <p>Âm hưởng lofi êm dịu, thư giãn tối đa cho tinh thần.</p>
+                        <p>Âm hưởng lofi êm dịu, thư giãn cho tinh thần.</p>
                       </div>
                     </div>
 
@@ -599,46 +595,9 @@ const HomePage = () => {
                         <p>Các khúc ca pop sôi động, hiện đại và trẻ trung.</p>
                       </div>
                     </div>
-
-                    <div className={`${styles.playlistCard} glass-panel`} onClick={() => handleSelectGenrePlaylist("Rock & Roll Legacy", "rock")}>
-                      <div className={styles.playlistIconBox} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #ec4899 100%)' }}>
-                        <Flame size={24} />
-                      </div>
-                      <div className={styles.playlistInfo}>
-                        <h4>Rock & Roll Legacy</h4>
-                        <p>Giai điệu mạnh mẽ, ghi-ta điện rực cháy đầy uy lực.</p>
-                      </div>
-                    </div>
                   </div>
                 </section>
 
-                {/* Popular Artists Circular grid */}
-                {popularArtists.length > 0 && (
-                  <section>
-                    <h2 className={styles.sectionTitle}>
-                      <Activity className={styles.titleIconGlow} size={22} /> Nghệ Sĩ Được Yêu Thích
-                    </h2>
-                    <div className={styles.artistRow}>
-                      {popularArtists.map((artist, idx) => {
-                        const artistImg = `https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&auto=format&fit=crop&q=80`;
-                        return (
-                          <div 
-                            key={idx} 
-                            className={styles.artistCircularCard}
-                            onClick={() => navigate(`/artist/${encodeURIComponent(artist.artists)}`)}
-                          >
-                            <div className={styles.artistAvatar}>
-                              <img src={artistImg} alt={artist.artists} />
-                            </div>
-                            <span className={styles.artistNameText}>{artist.artists}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
-
-                {/* User Listening History */}
                 {recentSongs.length > 0 && (
                   <section>
                     <h2 className={styles.sectionTitle}>
@@ -677,7 +636,6 @@ const HomePage = () => {
             <Footer />
           </div>
 
-          {/* Queue Panel Drawer Slider */}
           <div className={`${styles.queueDrawer} ${showQueue ? styles.queueDrawerOpen : ''}`}>
             <QueuePanel 
               queue={queue}
@@ -711,6 +669,7 @@ const HomePage = () => {
         previewLoading={previewLoading}
         previewUrl={previewUrl}
         onMaximize={() => navigate('/player')}
+        audioElement={audioElement}
       />
     </div>
   );

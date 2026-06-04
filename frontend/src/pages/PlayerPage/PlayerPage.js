@@ -37,17 +37,22 @@ const formatTime = (seconds) => {
   return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-// Simulated Lyrics for a high-end feel
+// Enhanced Simulated Lyrics Generator for a premium feel
 const getSimulatedLyrics = (songTitle, artistName) => {
   return [
-    { time: 0, text: `🎵 Đang phát: ${songTitle} - ${artistName} 🎵` },
-    { time: 3, text: "Giai điệu vang lên giữa không gian mờ ảo..." },
-    { time: 8, text: "Từng nốt nhạc đưa ta về những miền xúc cảm xa xôi" },
-    { time: 13, text: "Nơi ánh trăng dịu dàng dẫn lối tâm hồn" },
-    { time: 18, text: "Và tiếng cười ấm áp của ngày xưa như vẫn còn vẹn nguyên" },
-    { time: 23, text: "Dù thời gian có trôi nhanh như những cơn gió thoảng" },
-    { time: 27, text: "Tình yêu âm nhạc trong ta vẫn sẽ luôn cháy bỏng" },
-    { time: 30, text: "Cảm ơn bạn đã lựa chọn VioTune ❤️" }
+    { time: 0, text: `🎵 Bắt đầu nghe: ${songTitle}` },
+    { time: 2, text: `Sáng tác bởi: ${artistName}` },
+    { time: 5, text: "Giai điệu này thật tuyệt vời, phải không?" },
+    { time: 10, text: "VioTune đang phân tích gu âm nhạc của bạn..." },
+    { time: 15, text: "Từng nốt nhạc, từng nhịp điệu đều được tối ưu." },
+    { time: 20, text: "Bạn có biết? Ca khúc này đang thịnh hành trên toàn cầu." },
+    { time: 25, text: "Hãy nhắm mắt lại và tận hưởng không gian này." },
+    { time: 30, text: "Nhịp điệu đang dần trở nên sôi động hơn..." },
+    { time: 35, text: "Lời nhạc chạy mượt mà theo từng giây phút." },
+    { time: 40, text: "Bạn có thể nhấn vào bất kỳ dòng nào để tua nhanh." },
+    { time: 45, text: "Đội ngũ kỹ sư VioTune chúc bạn nghe nhạc vui vẻ." },
+    { time: 50, text: "Khám phá thêm nhiều bài hát gợi ý AI ở tab bên cạnh." },
+    { time: 55, text: "Cảm ơn bạn đã luôn ủng hộ đội ngũ VioTune ❤️" }
   ];
 };
 
@@ -106,15 +111,22 @@ const PlayerPage = () => {
     return currentTime >= l.time && (!nextL || currentTime < nextL.time);
   });
 
-  // Autoscroll lyrics container
+  // Autoscroll lyrics container - Enhanced centering logic
   useEffect(() => {
-    if (lyricsContainerRef.current && currentLyricIndex !== -1) {
+    if (lyricsContainerRef.current && currentLyricIndex !== -1 && activeTab === 'lyrics') {
       const activeEl = lyricsContainerRef.current.children[currentLyricIndex];
       if (activeEl) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Calculate dynamic offset to center the line
+        const container = lyricsContainerRef.current;
+        const offsetTop = activeEl.offsetTop - (container.clientHeight / 2) + (activeEl.clientHeight / 2);
+        
+        container.scrollTo({
+          top: offsetTop,
+          behavior: 'smooth'
+        });
       }
     }
-  }, [currentLyricIndex]);
+  }, [currentLyricIndex, activeTab]);
 
   const handleLike = async () => {
     if (!currentSong || !user) return;
@@ -153,6 +165,10 @@ const PlayerPage = () => {
     const width = rect.width;
     const clickRatio = Math.max(0, Math.min(1, clickX / width));
     setVolume(clickRatio);
+  };
+
+  const handleLyricClick = (time) => {
+    seek(time);
   };
 
   const handleQueueItemClick = (song, idx) => {
@@ -436,7 +452,7 @@ const PlayerPage = () => {
               </div>
             )}
 
-            {/* TAB 3: Autoscrolling lyrics simulated view */}
+            {/* TAB 3: Autoscrolling lyrics with Click-to-Seek */}
             {activeTab === 'lyrics' && (
               <div className={styles.lyricsWrapper}>
                 {!currentSong ? (
@@ -446,12 +462,18 @@ const PlayerPage = () => {
                     {lyrics.map((line, index) => {
                       const isActive = index === currentLyricIndex;
                       return (
-                        <p 
+                        <div 
                           key={index} 
                           className={`${styles.lyricLine} ${isActive ? styles.activeLyricLine : ''}`}
+                          onClick={() => handleLyricClick(line.time)}
+                          title={`Chuyển đến ${formatTime(line.time)}`}
                         >
-                          {line.text}
-                        </p>
+                          <div className={styles.lyricIndicator}>
+                            <span className={styles.lyricTime}>{formatTime(line.time)}</span>
+                            <Play size={10} className={styles.lyricPlayIcon} fill="currentColor" />
+                          </div>
+                          <span className={styles.lyricText}>{line.text}</span>
+                        </div>
                       );
                     })}
                   </div>
