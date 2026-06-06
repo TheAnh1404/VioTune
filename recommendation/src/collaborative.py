@@ -233,21 +233,20 @@ class SVDModel:
         return self
 
 
-# ===== KHỞI TẠO VÀ HUẤN LUYỆN HOẶC TẢI MODEL =====
-model_files = ["P.npy", "Q.npy", "b_u.npy", "b_i.npy", "mu.npy"]
-model_exists = all(os.path.exists(os.path.join(models_dir, f)) for f in model_files)
-
+# ===== KHỞI TẠO VÀ TẢI MODEL (LAZY LOADING) =====
 svd = SVDModel(n_users=n_users, n_items=n_items, k=50, lr=0.005, reg=0.02, n_epochs=30)
 
-if model_exists:
-    # Load model đã train sẵn (không cần train lại)
-    print("[CF] Phát hiện model đã được train, đang tải...")
-    svd.load(models_dir)
-else:
-    # Train mới từ đầu
-    print("[CF] Bắt đầu huấn luyện SVD Model...")
-    svd.fit(train_data, test_data)
-    svd.save(models_dir)
+def load_svd_model():
+    model_files = ["P.npy", "Q.npy", "b_u.npy", "b_i.npy", "mu.npy"]
+    model_exists = all(os.path.exists(os.path.join(models_dir, f)) for f in model_files)
+    if model_exists:
+        print("[CF] Phát hiện model đã được train, đang tải...")
+        svd.load(models_dir)
+    else:
+        print("[CF] CẢNH BÁO: Chưa tìm thấy model đã train. Vui lòng chạy 'python src/train.py'.")
+
+# Tải model ngay khi import để sẵn sàng phục vụ
+load_svd_model()
 
 
 # ===== LẤY TƯƠNG TÁC TỪ FIRESTORE QUA SDK HOẶC REST PHÂN TRANG =====

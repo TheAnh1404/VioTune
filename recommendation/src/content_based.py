@@ -51,17 +51,30 @@ use_annoy = False
 annoy_index = None
 nn_model = None
 
+# Path to pre-built index
+models_dir = os.path.join(current_dir, "../models")
+index_path = os.path.join(models_dir, "content_index.ann")
+
 try:
     from annoy import AnnoyIndex
     # 7 features, using angular distance which maps to Cosine distance
     annoy_index = AnnoyIndex(7, 'angular')
-    for i, vec in enumerate(scaled_features):
-        annoy_index.add_item(i, vec)
-    annoy_index.build(15) # Build 15 trees for high accuracy log-time search
-    use_annoy = True
-    print("[CB] Spotify Annoy approximate nearest neighbors index built successfully.")
+    
+    if os.path.exists(index_path):
+        print(f"[CB] Loading Annoy Index from {index_path}...")
+        annoy_index.load(index_path)
+        use_annoy = True
+        print("[CB] Annoy approximate nearest neighbors index loaded successfully.")
+    else:
+        print(f"[CB] Annoy Index not found at {index_path}. Building in-memory index...")
+        for i, vec in enumerate(scaled_features):
+            annoy_index.add_item(i, vec)
+        annoy_index.build(15)
+        use_annoy = True
+        print("[CB] In-memory Annoy index built successfully.")
 except ImportError:
     print("[CB] Annoy package not found, falling back to Scikit-learn NearestNeighbors (brute cosine).")
+    from sklearn.neighbors import NearestNeighbors
     nn_model = NearestNeighbors(n_neighbors=N_NEIGHBORS_TO_SEARCH, metric='cosine', algorithm='brute')
     nn_model.fit(scaled_features)
 

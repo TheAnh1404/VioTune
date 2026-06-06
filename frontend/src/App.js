@@ -12,6 +12,10 @@ import SearchPage from './pages/SearchPage/SearchPage';
 import PlayerPage from './pages/PlayerPage/PlayerPage';
 import PlaylistsPage from './pages/PlaylistsPage/PlaylistsPage';
 import ArtistPage from './pages/ArtistPage/ArtistPage';
+import AboutPage from './pages/InfoPages/AboutPage';
+import ContactPage from './pages/InfoPages/ContactPage';
+import FAQPage from './pages/InfoPages/FAQPage';
+import PrivacyPage from './pages/InfoPages/PrivacyPage';
 
 function App() {
   return (
@@ -23,6 +27,10 @@ function App() {
               <Route path="/" element={<Onboarding />} />
               <Route path="/login" element={<Login />} />
               <Route path="/recommendation" element={<Recommendation />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/faq" element={<FAQPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
               <Route
                 path="/home"
                 element={

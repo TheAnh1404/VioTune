@@ -285,6 +285,29 @@ except Exception as e:
 # In-memory database of likes: {user_id: set([track_ids])}
 user_likes = {}
 
+def sync_likes_from_local_db():
+    """Load all likes from the local SQLite database into the in-memory user_likes dict."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, track_id FROM liked_songs")
+        rows = cursor.fetchall()
+        count = 0
+        for row in rows:
+            uid = row['user_id']
+            tid = row['track_id']
+            if uid not in user_likes:
+                user_likes[uid] = set()
+            user_likes[uid].add(tid)
+            count += 1
+        conn.close()
+        print(f"[Startup] Synced {count} likes from local SQLite to memory.")
+    except Exception as e:
+        print(f"[Startup] Error syncing likes from SQLite: {e}")
+
+# Initial sync
+sync_likes_from_local_db()
+
 # In-memory Deezer preview URL cache: { 'track_name|artist': result_dict }
 _preview_cache: dict = {}
 
@@ -522,11 +545,27 @@ def trigger_retrain(background_tasks: BackgroundTasks):
     background_tasks.add_task(retrain_model_task)
     return {"status": "success", "message": "SVD model retraining triggered in background."}
 
+class RecommendRequest(BaseModel):
+    user_id: str
+    song_id: str
+    top_n: Optional[int] = 5
+    alpha: Optional[float] = 0.5
+
+class ContentRecommendRequest(BaseModel):
+    song_id: str
+    top_n: Optional[int] = 5
+
+class CFRecommendRequest(BaseModel):
+    user_id: str
+    top_n: Optional[int] = 5
+
 @app.get("/recommend")
 def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), alpha: float = Query(0.5, ge=0.0, le=1.0)):
+    # Using Pydantic for internal validation if needed, but keeping FastAPI Query for now as it's cleaner for GET
     try:
-        song_ids = [s.strip() for s in song_id.split(",") if s.strip()]
-        result = hybrid_recommend(user_id=user_id, song_ids=song_ids, top_n=top_n, alpha=alpha)
+        req = RecommendRequest(user_id=user_id, song_id=song_id, top_n=top_n, alpha=alpha)
+        song_ids = [s.strip() for s in req.song_id.split(",") if s.strip()]
+        result = hybrid_recommend(user_id=req.user_id, song_ids=song_ids, top_n=req.top_n, alpha=req.alpha)
         if isinstance(result, str): # Error message from inner function
             raise HTTPException(status_code=404, detail=result)
         return {"status": "success", "data": result}
@@ -539,8 +578,9 @@ def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), al
 @app.get("/recommend/content")
 def recommend_content(song_id: str, top_n: int = Query(5, ge=1, le=50)):
     try:
-        song_ids = [s.strip() for s in song_id.split(",") if s.strip()]
-        result_df = content_recommend_multi(song_ids, top_n=top_n)
+        req = ContentRecommendRequest(song_id=song_id, top_n=top_n)
+        song_ids = [s.strip() for s in req.song_id.split(",") if s.strip()]
+        result_df = content_recommend_multi(song_ids, top_n=req.top_n)
         if isinstance(result_df, str):
             raise HTTPException(status_code=404, detail=result_df)
         
@@ -554,7 +594,8 @@ def recommend_content(song_id: str, top_n: int = Query(5, ge=1, le=50)):
 @app.get("/recommend/cf")
 def recommend_collaborative(user_id: str, top_n: int = Query(5, ge=1, le=50)):
     try:
-        result_df = recommend_cf(user_id, top_n=top_n)
+        req = CFRecommendRequest(user_id=user_id, top_n=top_n)
+        result_df = recommend_cf(req.user_id, top_n=req.top_n)
         if isinstance(result_df, str):
             raise HTTPException(status_code=404, detail=result_df)
         
@@ -832,16 +873,35 @@ def like_song(track_id: str, user_id: str):
         user_likes[user_id] = set()
     
     import datetime
+    liked_at = datetime.datetime.now().isoformat()
     doc_id = f"{user_id}_{track_id}"
-    existing = fdb.get_document("liked_songs", doc_id)
     
-    if not existing:
-        liked_at = datetime.datetime.now().isoformat()
-        fdb.set_document("liked_songs", doc_id, {
-            "user_id": user_id,
-            "track_id": track_id,
-            "liked_at": liked_at
-        })
+    # 1. Sync to Firestore (Remote)
+    try:
+        existing = fdb.get_document("liked_songs", doc_id)
+        if not existing:
+            fdb.set_document("liked_songs", doc_id, {
+                "user_id": user_id,
+                "track_id": track_id,
+                "liked_at": liked_at
+            })
+    except Exception as fe:
+        print(f"[Like] Remote Sync Error: {fe}")
+
+    # 2. Sync to SQLite (Local Persistence)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT OR IGNORE INTO liked_songs (user_id, track_id, liked_at) VALUES (?, ?, ?)",
+            (user_id, track_id, liked_at)
+        )
+        conn.commit()
+        conn.close()
+    except Exception as se:
+        print(f"[Like] Local Sync Error: {se}")
+
+    # 3. Update memory
     user_likes[user_id].add(track_id)
     
     return {"status": "success", "liked": True, "message": "Song liked"}
@@ -857,8 +917,27 @@ def unlike_song(track_id: str, user_id: str):
         user_likes[user_id] = set()
     
     doc_id = f"{user_id}_{track_id}"
-    fdb.delete_document("liked_songs", doc_id)
-    
+
+    # 1. Sync to Firestore (Remote)
+    try:
+        fdb.delete_document("liked_songs", doc_id)
+    except Exception as fe:
+        print(f"[Unlike] Remote Sync Error: {fe}")
+
+    # 2. Sync to SQLite (Local Persistence)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM liked_songs WHERE user_id = ? AND track_id = ?",
+            (user_id, track_id)
+        )
+        conn.commit()
+        conn.close()
+    except Exception as se:
+        print(f"[Unlike] Local Sync Error: {se}")
+
+    # 3. Update memory
     if track_id in user_likes[user_id]:
         user_likes[user_id].remove(track_id)
     

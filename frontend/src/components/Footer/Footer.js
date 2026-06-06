@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import styles from './Footer.module.css';
 import logoIcon from '../../assets/logo.png'; // File logo không chữ của bạn
 
@@ -14,7 +15,7 @@ const Footer = () => {
           </div>
           <h3 className={styles.welcomeText}>Welcome To VioTune!</h3>
           <p className={styles.description}>
-            At Echo Stream, We Are Passionate About Bringing Music Closer To You.
+            At VioTune, We Are Passionate About Bringing Music Closer To You.
           </p>
         </div>
 
@@ -23,27 +24,26 @@ const Footer = () => {
           <div className={styles.linkColumn}>
             <h4>Main Links</h4>
             <ul>
-              <li>About Us</li>
-              <li>Contact Us</li>
-              <li>FAQ</li>
-              <li>Privacy Policy</li>
+              <li><Link to="/about">About Us</Link></li>
+              <li><Link to="/contact">Contact Us</Link></li>
+              <li><Link to="/faq">FAQ</Link></li>
+              <li><Link to="/privacy">Privacy Policy</Link></li>
             </ul>
           </div>
           <div className={styles.linkColumn}>
             <h4>Categories</h4>
             <ul>
-              <li>Music Genre</li>
-              <li>Popular Playlists</li>
-              <li>New Albums</li>
+              <li><Link to="/home">Music Genre</Link></li>
+              <li><Link to="/home">Popular Playlists</Link></li>
+              <li><Link to="/home">New Albums</Link></li>
             </ul>
           </div>
           <div className={styles.linkColumn}>
-            <h4>Main Links</h4>
+            <h4>Legal</h4>
             <ul>
-              <li>About Us</li>
-              <li>Contact Us</li>
-              <li>FAQ</li>
-              <li>Privacy Policy</li>
+              <li><Link to="/privacy">Terms of Service</Link></li>
+              <li><Link to="/privacy">Cookie Policy</Link></li>
+              <li><Link to="/about">Our Team</Link></li>
             </ul>
           </div>
         </div>
