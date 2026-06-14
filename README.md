@@ -1,151 +1,109 @@
-# VioTune: Intelligent Music Discovery & Recommendation Platform
+# 🎵 VioTune: Intelligent Music Discovery & Recommendation Platform
 
-Production setup, security requirements, containers, and release checks are documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
-
-VioTune is a state-of-the-art music streaming and discovery application powered by a sophisticated hybrid recommendation engine. It combines the strengths of **Collaborative Filtering** and **Content-Based Filtering** to deliver hyper-personalized music experiences.
-
-## 🚀 Key Features
-
-- **Hybrid Recommendation Engine**: Seamlessly blends SVD-based collaborative filtering with KNN-driven content analysis for superior accuracy.
-- **Dynamic Discovery**: Interactive sections including "Daily Pick," "Trending Now," and "Artist Updates."
-- **Immersive UI**: A modern, glassmorphic React-based dashboard designed for high engagement.
-- **Cross-Service Communication**: High-performance API integration between a React frontend and a FastAPI backend.
-- **Rich Analytics**: Smart genre detection and artist-followed tracking.
+VioTune là một nền tảng streaming và khám phá âm nhạc thông minh, sử dụng hệ thống gợi ý lai (Hybrid Recommendation Engine) để mang lại trải nghiệm cá nhân hóa tối ưu cho người dùng. Dự án kết hợp sức mạnh của **React 19** ở Frontend và **FastAPI** ở Backend.
 
 ---
 
-## 🛠️ Technology Stack
+## 🚀 Tính năng nổi bật (Key Features)
+
+- **Hệ thống gợi ý lai (Hybrid Engine)**: Kết hợp Collaborative Filtering (SVD) và Content-Based Filtering (KNN) để đưa ra gợi ý chính xác ngay cả với người dùng mới.
+- **Khám phá đa dạng**: Các mục "Daily Pick", "Trending Now", và "Artist Updates" được cập nhật liên tục.
+- **Trình phát nhạc hiện đại**: Giao diện Glassmorphism tích hợp Visualizer và Acoustic DNA Radar.
+- **Tìm kiếm thông minh**: Hỗ trợ tìm kiếm bài hát, nghệ sĩ và thể loại với hiệu năng cao nhờ SQLite indexing.
+- **Đồng bộ hóa Cloud**: Lưu trữ playlist, lịch sử nghe nhạc và sở thích người dùng thông qua Firebase/Firestore.
+- **Tích hợp Deezer**: Tự động lấy Preview nhạc (30s) và ảnh bìa album chất lượng cao từ Deezer API.
+
+---
+
+## 🛠️ Công nghệ sử dụng (Tech Stack)
 
 ### Frontend
-- **Framework**: [React](https://reactjs.org/) (Functional Components, Hooks)
-- **Routing**: React Router DOM
-- **Icons**: Lucide React
-- **Styling**: CSS Modules (Scoped, maintainable styling)
+- **Framework**: React 19 (Functional Components, Hooks)
+- **State Management**: Context API (`AuthContext`, `PlaybackContext`)
+- **UI/UX**: CSS Modules, Lucide Icons, Recharts (Acoustic Radar)
+- **Auth**: Custom logic tích hợp Firebase Authentication.
 
-### Backend (Recommendation Engine)
-- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Asynchronous, High Performance)
-- **Data Processing**: Pandas, NumPy
-- **Machine Learning**: Scikit-learn (Cosine Similarity, KNN), Surprise (SVD Matrix Factorization)
-- **Deployment**: Uvicorn
-
----
-
-## 🧠 Recommendation Logic: The Hybrid Approach
-
-VioTune utilizes a **weighted Reciprocal Rank Scoring (RRS)** system to merge predictions from two distinct models:
-
-1.  **Collaborative Filtering (CF)**: Analyzes user-item interaction patterns using **SVD Matrix Factorization** to find hidden preferences based on similar users.
-2.  **Content-Based Filtering (CBF)**: Uses **K-Nearest Neighbors (KNN)** and **Cosine Similarity** to recommend songs with similar acoustic features (genre, artists, tempo, etc.).
-
-The results are combined using a dynamic weight factor ($\alpha$), ensuring the system works perfectly for both existing users and new "cold start" scenarios.
+### Backend (Recommendation & API)
+- **Framework**: FastAPI (Python 3.10+) - Kiến trúc Modular với APIRouter.
+- **Database**: 
+    - **SQLite**: Local caching (Deezer previews) và metadata storage.
+    - **Firestore**: Lưu trữ dữ liệu người dùng realtime.
+- **Machine Learning**: 
+    - **Scikit-learn**: KNN cho Content-Based Filtering.
+    - **Surprise**: SVD Matrix Factorization cho Collaborative Filtering.
+- **Server**: Uvicorn.
 
 ---
 
-## 📂 Project Structure
+## 🧠 Logic gợi ý (Recommendation Logic)
+
+VioTune sử dụng thuật toán **Weighted Reciprocal Rank Scoring (RRS)** để gộp kết quả:
+
+1.  **Collaborative Filtering (CF)**: Dự đoán sở thích dựa trên hành vi của các người dùng tương tự thông qua ma trận SVD.
+2.  **Content-Based Filtering (CBF)**: Tính toán độ tương đồng giữa các bài hát dựa trên đặc trưng âm học (Acoustic features) như *danceability, energy, tempo, valence...*
+3.  **Hybrid Logic**: Kết quả cuối cùng là sự kết hợp theo trọng số $\alpha$:
+    $$Score = \alpha \cdot Score_{CBF} + (1 - \alpha) \cdot Score_{CF}$$
+    *Trong đó $\alpha$ có thể điều chỉnh để ưu tiên khám phá nhạc mới hoặc bám sát sở thích cũ.*
+
+---
+
+## 📂 Cấu trúc dự án (Project Structure)
 
 ```text
 VioTune/
-├── frontend/               # React Application
+├── frontend/                   # React Application
 │   ├── src/
-│   │   ├── components/     # Atomic UI components
-│   │   ├── pages/          # Main views (HomePage, etc.)
-│   │   └── assets/         # Static media assets
-│   └── package.json
-├── recommendation/         # Python Recommendation Service
-│   ├── api/                # FastAPI Endpoints
-│   ├── src/                # Recommendation Algorithms (Hybrid, CF, Content)
-│   ├── data/               # Dataset storage
-│   ├── models/             # Pre-trained ML models
-│   └── requirements.txt
-└── README.md
+│   │   ├── components/         # UI Components modular (Header, Player, etc.)
+│   │   ├── context/            # Auth & Playback state
+│   │   ├── pages/              # Các view chính (Home, Search, Artist...)
+│   │   └── api.js              # Cấu hình Fetch & Auth Interceptor
+├── recommendation/             # Backend Service (FastAPI)
+│   ├── api/
+│   │   ├── routers/            # Các module API riêng biệt (Users, Songs, etc.)
+│   │   ├── app.py              # File chạy chính (Modularized)
+│   │   └── database_init.py    # Khởi tạo SQLite
+│   ├── src/                    # Thuật toán ML Core
+│   │   ├── collaborative.py    # SVD Implementation
+│   │   ├── content_based.py    # KNN Similarity logic
+│   │   └── hybrid.py           # Logic gộp Hybrid
+│   ├── data/                   # Dataset & SQLite DB
+│   └── models/                 # Serialized ML models (.pkl)
+├── DEPLOYMENT.md               # Hướng dẫn triển khai Production
+└── GEMINI.md                   # Tài liệu hướng dẫn cho AI/Dev
 ```
 
 ---
 
-## ⚡ How to Build & Run (Hướng dẫn khởi chạy dự án)
+## ⚡ Hướng dẫn cài đặt (Installation & Setup)
 
-Dưới đây là hướng dẫn chi tiết để thiết lập và khởi chạy cả Backend (FastAPI) và Frontend (React) trên máy tính của bạn (đặc biệt tối ưu hóa cho hệ điều hành Windows).
+### 1. Cấu hình Backend (FastAPI)
 
----
+1.  Di chuyển vào thư mục backend: `cd recommendation`
+2.  Kích hoạt môi trường ảo:
+    - PowerShell: `..\.venv\Scripts\Activate.ps1`
+    - CMD: `..\.venv\Scripts\activate.bat`
+    - Linux/macOS: `source ../.venv/bin/activate`
+3.  Cài đặt thư viện: `pip install -r requirements.txt`
+4.  Chạy Server: `uvicorn api.app:app --reload`
+    *(API sẽ chạy tại `http://localhost:8000`)*
 
-### 1. Khởi chạy Backend (Recommendation Service)
+### 2. Cấu hình Frontend (React)
 
-Dự án sử dụng môi trường ảo Python (`.venv`) đặt ở thư mục gốc của project để quản lý các thư viện.
-
-#### Bước 1: Mở Terminal và di chuyển vào thư mục backend
-```bash
-cd recommendation
-```
-
-#### Bước 2: Kích hoạt môi trường ảo (Python Virtual Environment)
-Tùy thuộc vào Command Line bạn đang sử dụng trên Windows, hãy chọn lệnh tương ứng:
-
-*   **Nếu dùng PowerShell (Khuyên dùng)**:
-    ```powershell
-    ..\.venv\Scripts\Activate.ps1
-    ```
-    *(Lưu ý: Nếu PowerShell báo lỗi Execution Policy, hãy chạy lệnh `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` trước).*
-    
-*   **Nếu dùng Command Prompt (cmd)**:
-    ```cmd
-    ..\.venv\Scripts\activate.bat
-    ```
-    
-*   **Nếu dùng Git Bash / Linux / macOS**:
-    ```bash
-    source ../.venv/bin/activate
-    ```
-
-#### Bước 3: Cài đặt các thư viện (chỉ thực hiện lần đầu tiên)
-```bash
-pip install -r requirements.txt
-```
-
-#### Bước 4: Khởi chạy FastAPI Server
-*   **Nếu đã kích hoạt môi trường ảo**:
-    ```bash
-    uvicorn api.app:app --reload
-    ```
-*   **Hoặc có thể chạy trực tiếp (không cần kích hoạt môi trường ảo)**:
-    ```powershell
-    ..\.venv\Scripts\uvicorn api.app:app --reload
-    ```
-
-*Khi khởi chạy thành công, API backend sẽ hoạt động tại địa chỉ: `http://127.0.0.1:8000`*
+1.  Di chuyển vào thư mục frontend: `cd frontend`
+2.  Cài đặt dependencies: `npm install`
+3.  Chạy ứng dụng: `npm start`
+    *(Ứng dụng sẽ chạy tại `http://localhost:3000`)*
 
 ---
 
-### 2. Khởi chạy Frontend (React Application)
-
-#### Bước 1: Mở một cửa sổ Terminal mới và di chuyển vào thư mục frontend
-```bash
-cd frontend
-```
-
-#### Bước 2: Cài đặt các thư viện phụ thuộc (chỉ thực hiện lần đầu tiên)
-```bash
-npm install
-```
-
-#### Bước 3: Khởi chạy React Development Server
-```bash
-npm start
-```
-
-*Khi khởi chạy thành công, ứng dụng web sẽ tự động mở trên trình duyệt tại địa chỉ: `http://localhost:3000`*
-
----
-
-## 🛡️ Best Practices & Design Principles
-- **Scalability**: Decoupled frontend and backend for independent scaling.
-- **Maintainability**: Component-driven architecture in React and modular algorithm design in Python.
-- **Performance**: Optimized matrix operations for near-instant recommendations.
+## 🛡️ Security & Environment
+- Đảm bảo bạn đã cấu hình các file `.env` trong cả hai thư mục `frontend/` và `recommendation/`.
+- Backend sử dụng Firebase Admin SDK, yêu cầu file credential `.json` (được cấu hình qua biến môi trường).
 
 ---
 
 ## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+Project này được cấp phép dưới quyền MIT License.
 
 ---
-
 **Developed with ❤️ by VioTune Team**
