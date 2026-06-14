@@ -149,12 +149,23 @@ def get_song(track_id: str):
         cursor.execute("SELECT * FROM songs WHERE track_id = ? LIMIT 1", (track_id,))
         row = cursor.fetchone()
         conn.close()
-        if not row: raise HTTPException(status_code=404, detail="Song not found")
-        return {"status": "success", "data": dict(row)}
-    except Exception: raise HTTPException(status_code=500)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Database operation failed") from e
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Song not found")
+    return {"status": "success", "data": dict(row)}
 
 @router.get("/genres")
 def get_genres(request: Request):
     df = request.app.state.songs_df
     genres = sorted(df['track_genre'].dropna().unique().tolist())
     return {"status": "success", "data": genres}
+
+@router.get("/genres/{genre}/songs")
+def get_playlist_songs(request: Request, genre: str, limit: int = Query(15, ge=1, le=50)):
+    songs_df = request.app.state.songs_df
+    if songs_df.empty:
+        raise HTTPException(status_code=500, detail="Dataset not loaded")
+    genre_songs = songs_df[songs_df['track_genre'].str.lower() == genre.lower()].head(limit)
+    return {"status": "success", "data": genre_songs[['track_id', 'track_name', 'artists', 'track_genre', 'popularity']].to_dict(orient="records")}

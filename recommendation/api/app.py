@@ -41,14 +41,18 @@ app.add_middleware(
 
 # 3. Include Routers
 app.include_router(users.router)
-app.include_router(songs.router)
 app.include_router(interactions.router)
+app.include_router(songs.router)
 app.include_router(recommendations.router)
 app.include_router(playlists.router)
 
 @app.get("/")
 def home():
     return {"status": "success", "message": "VioTune Modular API is running 🚀"}
+
+@app.get("/health/live")
+def health_live():
+    return {"status": "live"}
 
 @app.get("/health/ready")
 def health_ready():

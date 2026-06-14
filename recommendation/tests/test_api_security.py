@@ -48,7 +48,7 @@ class ApiSecurityTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 403)
 
-    @patch("api.app.fdb.get_document")
+    @patch("api.routers.playlists.fdb.get_document")
     def test_user_cannot_mutate_another_users_playlist(self, get_document):
         get_document.return_value = {"playlist_id": "playlist-1", "user_id": "user-2"}
         app.dependency_overrides[get_current_user] = lambda: {"sub": "user-1"}

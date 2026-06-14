@@ -64,3 +64,18 @@ def get_playlist_songs(request: Request, playlist_id: str, current_user: dict = 
             row = s.iloc[0]
             data.append({"track_id": track_id, "track_name": row["track_name"], "artists": row["artists"], "added_at": r["added_at"]})
     return {"status": "success", "playlist": playlist, "data": data}
+
+@router.delete("/playlists/{playlist_id}/songs/{track_id}")
+def remove_song_from_playlist(playlist_id: str, track_id: str, current_user: dict = Depends(get_current_user)):
+    playlist = fdb.get_document("playlists", playlist_id)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    require_matching_user(playlist["user_id"], current_user)
+        
+    try:
+        doc_id = f"{playlist_id}_{track_id}"
+        fdb.delete_document("playlist_tracks", doc_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Database operation failed.") from e
+        
+    return {"status": "success", "message": "Song removed from playlist"}
