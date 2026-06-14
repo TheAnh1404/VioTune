@@ -254,8 +254,8 @@ def fetch_firestore_interactions():
     import os
     import requests
     
-    project_id = os.getenv("FIREBASE_PROJECT_ID", "viotuneteam6")
-    api_key = os.getenv("FIREBASE_API_KEY", "AIzaSyDfg87gFXYnAGRMO0j-dhHBOTj2IaoYFd4")
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "")
+    api_key = os.getenv("FIREBASE_API_KEY", "")
     
     new_interactions = []
     

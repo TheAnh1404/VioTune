@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // VioTune accesses Firestore through the authenticated FastAPI service.
+    // Server SDK requests use IAM and are not evaluated against these rules.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

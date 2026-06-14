@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './Header.module.css';
-import { Search, Bell, Settings, X, LogOut } from 'lucide-react';
+import { Search, X, LogOut } from 'lucide-react';
 import logo from '../../assets/logo.png';
 
 const Header = ({ searchQuery, onSearchChange, username = "Guest", onLogOut, showSearch = false }) => {

@@ -6,11 +6,9 @@ import SideBarMenu from './SideBarMenu/SideBarMenu';
 import Header from './Header/Header';
 import Footer from './Footer/Footer';
 import styles from './Recommendation.module.css';
-import { 
-  ArrowLeft, Music, Users, Layers, Play, Sparkles, 
-  Search, RefreshCw, BarChart2, Cpu, BarChart3, Star, Heart
-} from "lucide-react";
+import { ArrowLeft, Music, Users, Layers, Sparkles, RefreshCw } from "lucide-react";
 import { API_URL } from '../config';
+import { authenticatedFetch } from '../api';
 
 const getCoverImage = (trackId) => {
   const images = [
@@ -39,7 +37,7 @@ function Recommendation() {
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
 
   // State
-  const [userId, setUserId] = useState(user?.uid || "42");
+  const userId = user?.uid || "";
   const [songQuery, setSongQuery] = useState("Atlantis");
   const [songId, setSongId] = useState("");
   const [selectedSong, setSelectedSong] = useState(null);
@@ -52,13 +50,6 @@ function Recommendation() {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Sync with Auth user on mount/load
-  useEffect(() => {
-    if (user?.uid) {
-      setUserId(user.uid);
-    }
-  }, [user]);
 
   // Search songs as user types (debounced and race-safe)
   useEffect(() => {
@@ -122,11 +113,11 @@ function Recommendation() {
       const cbJson = await cbRes.json();
       
       // 2. Fetch Collaborative Filtering (CF) suggestions
-      const cfRes = await fetch(`${API_URL}/recommend/cf?user_id=${userId}&top_n=5`);
+      const cfRes = await authenticatedFetch(`${API_URL}/recommend/cf?user_id=${userId}&top_n=5`);
       const cfJson = await cfRes.json();
       
       // 3. Fetch Hybrid suggestions
-      const hyRes = await fetch(`${API_URL}/recommend?user_id=${userId}&song_id=${songId}&top_n=5`);
+      const hyRes = await authenticatedFetch(`${API_URL}/recommend?user_id=${userId}&song_id=${songId}&top_n=5`);
       const hyJson = await hyRes.json();
 
       const mapResult = (songs) => {
@@ -205,7 +196,7 @@ function Recommendation() {
                 <input
                   type="text"
                   value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
+                  readOnly
                   className={styles.inputStyle}
                   placeholder="Nhập User ID (Ví dụ: 42, 100 hoặc UID)"
                 />

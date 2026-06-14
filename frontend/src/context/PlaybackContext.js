@@ -118,7 +118,7 @@ export const PlaybackProvider = ({ children }) => {
     return () => {
       active = false; // Cleanup: invalidate this effect's async work
     };
-  }, [currentSong, isPlaying]);
+  }, [currentSong, isPlaying, volume]);
 
   // Sync Volume
   useEffect(() => {

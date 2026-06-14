@@ -2,11 +2,40 @@ import os
 import requests
 from typing import List, Dict, Any, Optional
 
+from google.cloud import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
+from google.oauth2 import service_account
+
 # Load Firebase configuration
-PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "viotuneteam6")
-API_KEY = os.getenv("FIREBASE_API_KEY", "AIzaSyDfg87gFXYnAGRMO0j-dhHBOTj2IaoYFd4")
+PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "")
+API_KEY = os.getenv("FIREBASE_API_KEY", "")
 
 BASE_URL = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents"
+
+
+def _create_admin_client():
+    use_admin_sdk = os.getenv("FIREBASE_USE_ADMIN_SDK", "").lower() == "true"
+    credentials_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
+    environment = os.getenv("ENVIRONMENT", "development").lower()
+
+    if (credentials_path or use_admin_sdk or environment == "production") and not PROJECT_ID:
+        raise RuntimeError("FIREBASE_PROJECT_ID is required.")
+
+    if credentials_path:
+        credentials = service_account.Credentials.from_service_account_file(credentials_path)
+        return firestore.Client(project=PROJECT_ID, credentials=credentials)
+
+    if use_admin_sdk:
+        return firestore.Client(project=PROJECT_ID)
+
+    if environment == "production":
+        raise RuntimeError("Production requires Firebase Admin SDK credentials.")
+
+    print("[Firestore] Development REST fallback enabled. Do not use this mode in production.")
+    return None
+
+
+ADMIN_CLIENT = _create_admin_client()
 
 def _get_url(path: str) -> str:
     url = f"{BASE_URL}/{path}"
@@ -73,6 +102,12 @@ def from_firestore_doc(f_doc: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_document(collection: str, doc_id: str) -> Optional[Dict[str, Any]]:
     """Retrieves a document from Firestore. Returns None if 404."""
+    if ADMIN_CLIENT:
+        snapshot = ADMIN_CLIENT.collection(collection).document(doc_id).get()
+        if not snapshot.exists:
+            return None
+        return {**snapshot.to_dict(), "id": snapshot.id}
+
     url = _get_url(f"{collection}/{doc_id}")
     try:
         resp = requests.get(url, timeout=10)
@@ -89,6 +124,10 @@ def get_document(collection: str, doc_id: str) -> Optional[Dict[str, Any]]:
 
 def set_document(collection: str, doc_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Upserts a document to Firestore using PATCH."""
+    if ADMIN_CLIENT:
+        ADMIN_CLIENT.collection(collection).document(doc_id).set(data, merge=True)
+        return {**data, "id": doc_id}
+
     url = _get_url(f"{collection}/{doc_id}")
     payload = to_firestore_doc(data)
     try:
@@ -104,6 +143,10 @@ def set_document(collection: str, doc_id: str, data: Dict[str, Any]) -> Optional
 
 def delete_document(collection: str, doc_id: str) -> bool:
     """Deletes a document from Firestore. Returns True if successful."""
+    if ADMIN_CLIENT:
+        ADMIN_CLIENT.collection(collection).document(doc_id).delete()
+        return True
+
     url = _get_url(f"{collection}/{doc_id}")
     try:
         resp = requests.delete(url, timeout=10)
@@ -124,6 +167,21 @@ def query_documents(
     limit: Optional[int] = None
 ) -> List[Dict[str, Any]]:
     """Queries Firestore collection using :runQuery."""
+    if ADMIN_CLIENT:
+        query = ADMIN_CLIENT.collection(collection)
+        for key, value in (filters or {}).items():
+            query = query.where(filter=FieldFilter(key, "==", value))
+        if order_by:
+            order_direction = (
+                firestore.Query.DESCENDING
+                if direction == "DESCENDING"
+                else firestore.Query.ASCENDING
+            )
+            query = query.order_by(order_by, direction=order_direction)
+        if limit:
+            query = query.limit(limit)
+        return [{**snapshot.to_dict(), "id": snapshot.id} for snapshot in query.stream()]
+
     url = f"{BASE_URL}:runQuery"
     if API_KEY:
         url += f"?key={API_KEY}"

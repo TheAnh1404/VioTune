@@ -17,56 +17,27 @@ current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(current_dir)
 load_dotenv(os.path.join(current_dir, ".env"))
 
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional
+from typing import Optional
 from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import requests
 import urllib.parse
-import hashlib
-import uuid
 import datetime
 
 from src.hybrid import hybrid_recommend
 from src.content_based import recommend_multi as content_recommend_multi
 from src.collaborative import recommend_cf
 from api.db import get_db_connection
+from api.auth import get_current_uid, get_current_user, require_admin, require_matching_user
 import api.firebase_db as fdb
 
 app = FastAPI(title="VioTune API", description="Music Recommendation API", version="1.0.0")
 
-# Setup environment database paths
-current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-db_path = os.path.join(current_dir, "data/viotune.db")
-
-# Salting and Hashing password helpers using standard hashlib
-def hash_password(password: str, salt: str = None) -> str:
-    if not salt:
-        salt = uuid.uuid4().hex
-    hash_val = hashlib.sha256((password + salt).encode('utf-8')).hexdigest()
-    return f"{salt}${hash_val}"
-
-def verify_password(password: str, hashed_password: str) -> bool:
-    try:
-        salt, hash_val = hashed_password.split("$")
-        return hash_password(password, salt) == hashed_password
-    except Exception:
-        return False
-
-# Pydantic Auth Models
-class SignupRequest(BaseModel):
-    email: str
-    password: str
-    displayName: str
-
-class SigninRequest(BaseModel):
-    email: str
-    password: str
-
-class ResetPasswordRequest(BaseModel):
-    email: str
+class UserSyncRequest(BaseModel):
+    displayName: Optional[str] = None
 
 class CreatePlaylistRequest(BaseModel):
     user_id: str
@@ -86,7 +57,6 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             uid TEXT PRIMARY KEY,
             email TEXT UNIQUE,
-            password_hash TEXT,
             display_name TEXT,
             created_at TEXT
         )
@@ -184,44 +154,26 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_deezer_cache_key ON deezer_cache(cache_key);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_playlist_user ON playlists(user_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_playlist_track ON playlist_tracks(playlist_id, track_id);")
-    
-    # 9. Seed a default developer test user if it does not exist
-    cursor.execute("SELECT 1 FROM users WHERE email = 'test@viotune.com'")
-    if not cursor.fetchone():
-        import datetime
-        uid = "test_user_seeded_id"
-        email = "test@viotune.com"
-        password_hash = hash_password("test12345")
-        display_name = "VioTune Test"
-        created_at = datetime.datetime.now().isoformat()
-        cursor.execute(
-            "INSERT INTO users (uid, email, password_hash, display_name, created_at) VALUES (?, ?, ?, ?, ?)",
-            (uid, email, password_hash, display_name, created_at)
-        )
-        
+
+    cursor.execute("SELECT COUNT(*) FROM songs")
+    if cursor.fetchone()[0] == 0:
+        dataset_path = os.path.join(current_dir, "data/dataset.csv")
+        if not os.path.exists(dataset_path):
+            raise RuntimeError("Song catalog is empty and data/dataset.csv is missing.")
+
+        dataset = pd.read_csv(dataset_path)
+        dataset = dataset.dropna(subset=["track_id", "track_name", "artists", "track_genre"])
+        dataset = dataset.drop_duplicates(subset=["track_id"])
+        if "Unnamed: 0" in dataset.columns:
+            dataset = dataset.drop("Unnamed: 0", axis=1)
+        dataset.to_sql("songs", conn, if_exists="append", index=False)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_track_name ON songs(track_name);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_artists ON songs(artists);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_track_genre ON songs(track_genre);")
+        print(f"Bootstrapped {len(dataset)} songs from dataset.csv.")
+
     conn.commit()
     conn.close()
-
-    # Seed in Firestore
-    try:
-        existing_fs = fdb.query_documents("users", {"email": "test@viotune.com"}, limit=1)
-        if not existing_fs:
-            import datetime
-            uid = "test_user_seeded_id"
-            email = "test@viotune.com"
-            password_hash = hash_password("test12345")
-            display_name = "VioTune Test"
-            created_at = datetime.datetime.now().isoformat()
-            fdb.set_document("users", uid, {
-                "uid": uid,
-                "email": email,
-                "password_hash": password_hash,
-                "display_name": display_name,
-                "created_at": created_at
-            })
-            print("Seeded test user to Firestore successfully.")
-    except Exception as fe:
-        print(f"Error seeding test user to Firestore: {fe}")
 
 
 # Initialize SQLite tables
@@ -255,10 +207,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Load metadata from SQLite database
-current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-db_path = os.path.join(current_dir, "data/viotune.db")
 
 try:
     conn = get_db_connection()
@@ -315,78 +263,70 @@ _preview_cache: dict = {}
 def home():
     return {"status": "success", "message": "Recommendation API is running 🚀"}
 
-# --- AUTH ENPOINTS ---
-@app.post("/api/auth/signup")
-def signup(req: SignupRequest):
-    import datetime
-    import uuid
-    
-    email = req.email.strip().lower()
-    if not email:
-        raise HTTPException(status_code=400, detail="Email is required.")
-    
-    existing_users = fdb.query_documents("users", {"email": email}, limit=1)
-    if existing_users:
-        raise HTTPException(status_code=400, detail="This email is already registered.")
-    
-    uid = str(uuid.uuid4())
-    password_hash = hash_password(req.password)
-    created_at = datetime.datetime.now().isoformat()
-    
+@app.get("/health/live")
+def health_live():
+    return {"status": "ok"}
+
+@app.get("/health/ready")
+def health_ready():
+    if songs_df.empty:
+        raise HTTPException(status_code=503, detail="Song catalog is not loaded.")
+    try:
+        conn = get_db_connection()
+        conn.execute("SELECT 1")
+        conn.close()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Database is not ready.") from exc
+    return {"status": "ready", "songs": len(songs_df)}
+
+# --- USER PROFILE ENDPOINTS ---
+@app.put("/api/users/me")
+def sync_user_profile(req: UserSyncRequest, current_user: dict = Depends(get_current_user)):
+    uid = get_current_uid(current_user)
+    email = str(current_user.get("email", "")).strip().lower()
+    existing_user = fdb.get_document("users", uid) or {}
+    created_at = existing_user.get("created_at", datetime.datetime.now().isoformat())
+    display_name = (req.displayName or current_user.get("name") or "VioTune User").strip()
+
+    conn = get_db_connection()
+    if email:
+        conn.execute(
+            "UPDATE users SET email = NULL WHERE email = ? AND uid <> ?",
+            (email, uid),
+        )
+    conn.execute(
+        """
+        INSERT INTO users (uid, email, display_name, created_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(uid) DO UPDATE SET
+            email = excluded.email,
+            display_name = excluded.display_name
+        """,
+        (uid, email or None, display_name, created_at),
+    )
+    conn.commit()
+    conn.close()
+
     fdb.set_document("users", uid, {
         "uid": uid,
         "email": email,
-        "password_hash": password_hash,
-        "display_name": req.displayName.strip(),
+        "display_name": display_name,
         "created_at": created_at
     })
-    
+
     return {
         "status": "success",
         "user": {
             "uid": uid,
             "email": email,
-            "displayName": req.displayName.strip()
+            "displayName": display_name
         }
-    }
-
-@app.post("/api/auth/signin")
-def signin(req: SigninRequest):
-    email = req.email.strip().lower()
-    existing_users = fdb.query_documents("users", {"email": email}, limit=1)
-    
-    if not existing_users:
-        raise HTTPException(status_code=400, detail="No account found with this email.")
-        
-    user_row = existing_users[0]
-    if not verify_password(req.password, user_row["password_hash"]):
-        raise HTTPException(status_code=400, detail="Incorrect password.")
-        
-    return {
-        "status": "success",
-        "user": {
-            "uid": user_row["uid"],
-            "email": user_row["email"],
-            "displayName": user_row["display_name"]
-        }
-    }
-
-@app.post("/api/auth/reset-password")
-def reset_password_route(req: ResetPasswordRequest):
-    email = req.email.strip().lower()
-    existing_users = fdb.query_documents("users", {"email": email}, limit=1)
-    
-    if not existing_users:
-        raise HTTPException(status_code=404, detail="No account found with this email.")
-        
-    return {
-        "status": "success",
-        "message": "Password reset email simulated successfully."
     }
 
 # --- MUSIC DATA LOGGING & PROFILE ANALYTICS ---
 @app.post("/songs/{track_id}/play")
-def record_song_play(track_id: str, user_id: str):
+def record_song_play(track_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = require_matching_user(user_id, current_user)
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     
@@ -410,7 +350,8 @@ def record_song_play(track_id: str, user_id: str):
     return {"status": "success", "message": "Song play recorded"}
 
 @app.get("/api/users/{user_id}/taste-profile")
-def get_user_taste_profile(user_id: str):
+def get_user_taste_profile(user_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = require_matching_user(user_id, current_user)
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
         
@@ -537,7 +478,7 @@ def retrain_model_task():
         print(f"[Retrain Task] Lỗi huấn luyện: {e}")
 
 @app.post("/recommend/retrain")
-def trigger_retrain(background_tasks: BackgroundTasks):
+def trigger_retrain(background_tasks: BackgroundTasks, _admin: dict = Depends(require_admin)):
     """
     Endpoint kích hoạt huấn luyện lại mô hình SVD bất đồng bộ (chạy ngầm).
     Tránh chặn luồng request và tối ưu hóa tài nguyên.
@@ -560,9 +501,10 @@ class CFRecommendRequest(BaseModel):
     top_n: Optional[int] = 5
 
 @app.get("/recommend")
-def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), alpha: float = Query(0.5, ge=0.0, le=1.0)):
+def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), alpha: float = Query(0.5, ge=0.0, le=1.0), current_user: dict = Depends(get_current_user)):
     # Using Pydantic for internal validation if needed, but keeping FastAPI Query for now as it's cleaner for GET
     try:
+        user_id = require_matching_user(user_id, current_user)
         req = RecommendRequest(user_id=user_id, song_id=song_id, top_n=top_n, alpha=alpha)
         song_ids = [s.strip() for s in req.song_id.split(",") if s.strip()]
         result = hybrid_recommend(user_id=req.user_id, song_ids=song_ids, top_n=req.top_n, alpha=req.alpha)
@@ -572,7 +514,7 @@ def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), al
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error.") from e
 
 
 @app.get("/recommend/content")
@@ -589,11 +531,12 @@ def recommend_content(song_id: str, top_n: int = Query(5, ge=1, le=50)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error.") from e
 
 @app.get("/recommend/cf")
-def recommend_collaborative(user_id: str, top_n: int = Query(5, ge=1, le=50)):
+def recommend_collaborative(user_id: str, top_n: int = Query(5, ge=1, le=50), current_user: dict = Depends(get_current_user)):
     try:
+        user_id = require_matching_user(user_id, current_user)
         req = CFRecommendRequest(user_id=user_id, top_n=top_n)
         result_df = recommend_cf(req.user_id, top_n=req.top_n)
         if isinstance(result_df, str):
@@ -604,7 +547,7 @@ def recommend_collaborative(user_id: str, top_n: int = Query(5, ge=1, le=50)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error.") from e
 
 @app.get("/songs/search")
 def search_songs(q: str = Query(..., min_length=1), limit: int = Query(10, ge=1, le=50)):
@@ -639,7 +582,7 @@ def search_songs(q: str = Query(..., min_length=1), limit: int = Query(10, ge=1,
             })
         return {"status": "success", "data": data}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error.") from e
 
 @app.get("/artists/{artist_name}/tracks")
 def get_artist_tracks(artist_name: str, limit: int = Query(30, ge=1, le=100)):
@@ -680,7 +623,7 @@ def get_artist_tracks(artist_name: str, limit: int = Query(30, ge=1, le=100)):
             })
         return {"status": "success", "data": data}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error.") from e
 
 @app.get("/songs/random")
 def get_random_songs(limit: int = Query(10, ge=1, le=50)):
@@ -700,7 +643,8 @@ def get_daily_pick(limit: int = Query(5, ge=1, le=20)):
     return {"status": "success", "data": picks[['track_id', 'track_name', 'artists', 'track_genre', 'popularity']].to_dict(orient="records")}
 
 @app.get("/songs/liked")
-def get_liked_songs(user_id: str):
+def get_liked_songs(user_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = require_matching_user(user_id, current_user)
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     
@@ -723,7 +667,8 @@ def get_liked_songs(user_id: str):
 
 
 @app.get("/songs/history")
-def get_play_history_route(user_id: str, limit: int = Query(20, ge=1, le=50)):
+def get_play_history_route(user_id: str, limit: int = Query(20, ge=1, le=50), current_user: dict = Depends(get_current_user)):
+    user_id = require_matching_user(user_id, current_user)
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     
@@ -833,7 +778,8 @@ def get_song_preview_route(track_name: str, artist: str):
     except requests.exceptions.Timeout:
         return {"status": "success", "data": {"preview_url": None, "found": False, "error": "Deezer timeout"}}
     except Exception as e:
-        return {"status": "success", "data": {"preview_url": None, "found": False, "error": str(e)}}
+        print(f"Deezer preview lookup failed: {e}")
+        return {"status": "success", "data": {"preview_url": None, "found": False, "error": "Preview lookup failed"}}
 
 
 
@@ -856,11 +802,12 @@ def get_song(track_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error.") from e
 
 @app.post("/songs/{track_id}/like")
-def like_song(track_id: str, user_id: str):
+def like_song(track_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
     """Idempotent: liking an already-liked song is a no-op (returns success)."""
+    user_id = require_matching_user(user_id, current_user)
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     
@@ -908,8 +855,9 @@ def like_song(track_id: str, user_id: str):
 
 
 @app.delete("/songs/{track_id}/like")
-def unlike_song(track_id: str, user_id: str):
+def unlike_song(track_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
     """Idempotent: unliking an already-unliked song is a no-op (returns success)."""
+    user_id = require_matching_user(user_id, current_user)
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
     
@@ -999,7 +947,7 @@ def get_dynamic_playlists(limit: int = Query(5, ge=1, le=20)):
         })
     return {"status": "success", "data": playlists}
 
-@app.get("/playlists/{genre}/songs")
+@app.get("/genres/{genre}/songs")
 def get_playlist_songs(genre: str, limit: int = Query(15, ge=1, le=50)):
     if songs_df.empty:
         raise HTTPException(status_code=500, detail="Dataset not loaded")
@@ -1035,33 +983,30 @@ def get_mock_albums(limit: int = Query(5, ge=1, le=20)):
 # --- USER PLAYLISTS APIS ---
 
 @app.post("/playlists")
-def create_playlist(req: CreatePlaylistRequest):
+def create_playlist(req: CreatePlaylistRequest, current_user: dict = Depends(get_current_user)):
     import uuid
     import datetime
-    
+
+    user_id = require_matching_user(req.user_id, current_user)
     playlist_id = str(uuid.uuid4())
     created_at = datetime.datetime.now().isoformat()
-    
-    user = fdb.get_document("users", req.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-        
+
     try:
         fdb.set_document("playlists", playlist_id, {
             "playlist_id": playlist_id,
-            "user_id": req.user_id,
+            "user_id": user_id,
             "name": req.name.strip(),
             "description": req.description,
             "created_at": created_at
         })
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        raise HTTPException(status_code=500, detail="Database operation failed.") from e
         
     return {
         "status": "success",
         "data": {
             "playlist_id": playlist_id,
-            "user_id": req.user_id,
+            "user_id": user_id,
             "name": req.name,
             "description": req.description,
             "created_at": created_at
@@ -1069,11 +1014,8 @@ def create_playlist(req: CreatePlaylistRequest):
     }
 
 @app.get("/users/{user_id}/playlists")
-def get_user_playlists(user_id: str):
-    user = fdb.get_document("users", user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-        
+def get_user_playlists(user_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = require_matching_user(user_id, current_user)
     rows = fdb.query_documents("playlists", {"user_id": user_id}, order_by="created_at", direction="DESCENDING")
     
     playlists = []
@@ -1089,13 +1031,14 @@ def get_user_playlists(user_id: str):
     return {"status": "success", "data": playlists}
 
 @app.post("/playlists/{playlist_id}/songs")
-def add_song_to_playlist(playlist_id: str, req: AddPlaylistSongRequest):
+def add_song_to_playlist(playlist_id: str, req: AddPlaylistSongRequest, current_user: dict = Depends(get_current_user)):
     import datetime
     added_at = datetime.datetime.now().isoformat()
     
     playlist = fdb.get_document("playlists", playlist_id)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
+    require_matching_user(playlist["user_id"], current_user)
         
     # Verify song exists in our local dataframe
     song = songs_df[songs_df['track_id'] == req.track_id]
@@ -1114,29 +1057,31 @@ def add_song_to_playlist(playlist_id: str, req: AddPlaylistSongRequest):
             "added_at": added_at
         })
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        raise HTTPException(status_code=500, detail="Database operation failed.") from e
         
     return {"status": "success", "message": "Song added to playlist"}
 
 @app.delete("/playlists/{playlist_id}/songs/{track_id}")
-def remove_song_from_playlist(playlist_id: str, track_id: str):
+def remove_song_from_playlist(playlist_id: str, track_id: str, current_user: dict = Depends(get_current_user)):
     playlist = fdb.get_document("playlists", playlist_id)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
+    require_matching_user(playlist["user_id"], current_user)
         
     try:
         doc_id = f"{playlist_id}_{track_id}"
         fdb.delete_document("playlist_tracks", doc_id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        raise HTTPException(status_code=500, detail="Database operation failed.") from e
         
     return {"status": "success", "message": "Song removed from playlist"}
 
 @app.get("/playlists/{playlist_id}/songs")
-def get_playlist_songs_route(playlist_id: str):
+def get_playlist_songs_route(playlist_id: str, current_user: dict = Depends(get_current_user)):
     playlist = fdb.get_document("playlists", playlist_id)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
+    require_matching_user(playlist["user_id"], current_user)
         
     rows = fdb.query_documents("playlist_tracks", {"playlist_id": playlist_id}, order_by="added_at", direction="ASCENDING")
     

@@ -7,11 +7,12 @@ import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
 import styles from './ArtistPage.module.css';
 import { 
-  Play, Heart, Music, Calendar, Plus, 
+  Play, Heart, Music, Plus,
   Sparkles, ListPlus, ArrowLeft, Check, AlertCircle,
   Activity, Award, BarChart3, Disc, Flame, Info, Sliders
 } from 'lucide-react';
 import { API_URL } from '../../config';
+import { authenticatedFetch } from '../../api';
 
 const getArtistBannerImage = (artistName) => {
   const banners = [
@@ -169,7 +170,7 @@ const ArtistPage = () => {
     const fetchPlaylists = async () => {
       if (!user) return;
       try {
-        const res = await fetch(`${API_URL}/users/${user.uid}/playlists`);
+        const res = await authenticatedFetch(`${API_URL}/users/${user.uid}/playlists`);
         const json = await res.json();
         if (json.status === "success") {
           setPlaylists(json.data);
@@ -203,7 +204,7 @@ const ArtistPage = () => {
     e.stopPropagation();
     setActiveDropdown(null);
     try {
-      const res = await fetch(`${API_URL}/playlists/${playlistId}/songs`, {
+      const res = await authenticatedFetch(`${API_URL}/playlists/${playlistId}/songs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ track_id: trackId })

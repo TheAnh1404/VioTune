@@ -1,5 +1,7 @@
 # VioTune: Intelligent Music Discovery & Recommendation Platform
 
+Production setup, security requirements, containers, and release checks are documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
 VioTune is a state-of-the-art music streaming and discovery application powered by a sophisticated hybrid recommendation engine. It combines the strengths of **Collaborative Filtering** and **Content-Based Filtering** to deliver hyper-personalized music experiences.
 
 ## 🚀 Key Features

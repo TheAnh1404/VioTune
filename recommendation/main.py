@@ -45,7 +45,7 @@ print("🎧 Gợi ý theo Collaborative:")
 print(recommend_cf(user_id=100))
 
 print("🚀 Hybrid Recommendation:")
-print(hybrid_recommend(user_id=1, song_id=track_id))
+print(hybrid_recommend(user_id=1, song_ids=[track_id]))
 
 for song in result:
     print(song)

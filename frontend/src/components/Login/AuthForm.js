@@ -16,7 +16,9 @@ const AuthForm = ({ type, title, subtitle, inputs, buttonText, showForgot, onFor
           <button type="button" onClick={onFacebookClick} className={styles.icons} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', outline: 'none' }}>
             <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" width="20" alt="Facebook" />
           </button>
-          <a href="#" className={styles.icons}><Mail size={20} color="white" /></a>
+          <button type="button" aria-label="Email sign in" className={styles.icons} style={{ background: 'none', border: 'none' }}>
+            <Mail size={20} color="white" />
+          </button>
         </div>
         
         <span className={styles.span}>{subtitle}</span>

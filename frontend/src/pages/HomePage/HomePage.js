@@ -6,15 +6,15 @@ import Footer from '../../components/Footer/Footer';
 import QueuePanel from '../../components/QueuePanel/QueuePanel';
 import styles from './HomePage.module.css';
 import MusicPlayer from '../../components/MusicPlayer/MusicPlayer';
-import ErrorBoundary from '../../components/ErrorBoundary/ErrorBoundary';
 import { useAuth } from '../../context/AuthContext';
 import { usePlayback } from '../../context/PlaybackContext';
 import { API_URL } from '../../config';
+import { authenticatedFetch } from '../../api';
 import AcousticDNARadar from '../../components/AcousticDNARadar/AcousticDNARadar';
 import { 
-  Sparkles, Sliders, Cpu, Heart, Play, RefreshCw, 
-  Search, Music, Activity, Flame, Library, Music2, 
-  ArrowRight, Radio, Star, Layers, Disc, X, Zap, Coffee, Brain
+  Sparkles, Sliders, Heart, Play, RefreshCw,
+  Search, Music, Flame, Library, Music2,
+  Radio, Star, Disc, X, Zap, Coffee, Brain
 } from 'lucide-react';
 
 const getCoverImage = (trackId) => {
@@ -40,7 +40,7 @@ const HomePage = () => {
   
   // ── Auth context (Hoisted Global State) ───────────────────────────────────────
   const { 
-    user, logOut, likeSong, unlikeSong, 
+    user, isAdmin, logOut, likeSong, unlikeSong,
     likedSongsList: likedSongs, likedSongIds 
   } = useAuth();
   const userId = user?.uid || 'anonymous';
@@ -65,9 +65,7 @@ const HomePage = () => {
   // ── Core Dashboard States ─────────────────────────────────────────────────────
   const [trendingSongs, setTrendingSongs] = useState([]);
   const [recentSongs, setRecentSongs] = useState([]);
-  const [popularArtists, setPopularArtists] = useState([]);
   const [playlistSongs, setPlaylistSongs] = useState([]);
-  const [playlistTitle, setPlaylistTitle] = useState("");
   
   // ── AI recommendation States ──────────────────────────────────────────────────
   const [alpha, setAlpha] = useState(0.5);
@@ -90,30 +88,12 @@ const HomePage = () => {
 
   // ── 1. Initial Data Fetching on Mount ─────────────────────────────────────────
   useEffect(() => {
-    const fetchPopularArtists = async () => {
-      try {
-        const res = await fetch(`${API_URL}/artists?limit=8`);
-        const json = await res.json();
-        if (json.status === "success") {
-          setPopularArtists(json.data);
-        }
-      } catch (err) {
-        console.error("Error fetching popular artists:", err);
-      }
-    };
-
     const fetchTrending = async () => {
       try {
         const res = await fetch(`${API_URL}/songs/random?limit=10`);
         const json = await res.json();
         if (json.status === "success") {
           setTrendingSongs(json.data);
-          // Load default queue if empty
-          if (json.data.length > 0 && !currentSong) {
-            setCurrentSong(json.data[0]);
-            setQueue(json.data);
-            setCurrentIndex(0);
-          }
         }
       } catch (err) {
         console.error("Error fetching trending songs:", err);
@@ -122,7 +102,7 @@ const HomePage = () => {
 
     const fetchHistory = async () => {
       try {
-        const res = await fetch(`${API_URL}/songs/history?user_id=${userId}`);
+        const res = await authenticatedFetch(`${API_URL}/songs/history?user_id=${userId}`);
         const json = await res.json();
         if (json.status === "success") {
           setRecentSongs(json.data.slice(0, 5));
@@ -132,12 +112,19 @@ const HomePage = () => {
       }
     };
 
-    fetchPopularArtists();
     fetchTrending();
     if (user) {
       fetchHistory();
     }
   }, [user, userId]); // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (trendingSongs.length > 0 && !currentSong) {
+      setCurrentSong(trendingSongs[0]);
+      setQueue(trendingSongs);
+      setCurrentIndex(0);
+    }
+  }, [currentSong, setCurrentIndex, setCurrentSong, setQueue, trendingSongs]);
 
   // ── 2. Sync Seed Song with Active Song or Fetch Default ───────────────────────
   useEffect(() => {
@@ -157,13 +144,13 @@ const HomePage = () => {
       };
       fetchDefaultSeed();
     }
-  }, [currentSong]); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSong, seedSongs.length]);
 
   // ── 3. Fetch User Taste Profile (Acoustic DNA) ───────────────────────────────
   useEffect(() => {
     const fetchTasteProfile = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/users/${userId}/taste-profile`);
+        const res = await authenticatedFetch(`${API_URL}/api/users/${userId}/taste-profile`);
         const json = await res.json();
         if (json.status === "success") {
           setTaste(json.data);
@@ -215,7 +202,7 @@ const HomePage = () => {
       setLoadingRecs(true);
       try {
         const ids = seedSongs.map(s => s.track_id).join(',');
-        const res = await fetch(`${API_URL}/recommend?user_id=${userId}&song_id=${ids}&alpha=${alpha}&top_n=6`);
+        const res = await authenticatedFetch(`${API_URL}/recommend?user_id=${userId}&song_id=${ids}&alpha=${alpha}&top_n=6`);
         const json = await res.json();
         if (json.status === "success") {
           const tracks = json.data.map(track => {
@@ -277,7 +264,7 @@ const HomePage = () => {
     setRetrainLoading(true);
     setRetrainStatus("Kích hoạt SGD Matrix Factorization...");
     try {
-      const res = await fetch(`${API_URL}/recommend/retrain`, { method: 'POST' });
+      const res = await authenticatedFetch(`${API_URL}/recommend/retrain`, { method: 'POST' });
       const json = await res.json();
       if (json.status === "success") {
         setRetrainStatus("Đã tái huấn luyện SVD thành công!");
@@ -324,13 +311,12 @@ const HomePage = () => {
     }
   };
 
-  const handleSelectGenrePlaylist = async (playlistName, genreName) => {
+  const handleSelectGenrePlaylist = async (genreName) => {
     try {
-      const res = await fetch(`${API_URL}/playlists/${genreName}/songs?limit=15`);
+      const res = await fetch(`${API_URL}/genres/${genreName}/songs?limit=15`);
       const json = await res.json();
       if (json.status === "success") {
         setPlaylistSongs(json.data);
-        setPlaylistTitle(playlistName);
         if (json.data.length > 0) {
           playSong(json.data[0], json.data);
           navigate('/player');
@@ -493,13 +479,13 @@ const HomePage = () => {
                     />
                   </div>
 
-                  <div className={styles.retrainSection}>
+                  {isAdmin && <div className={styles.retrainSection}>
                     <button className={styles.retrainBtn} onClick={handleRetrain} disabled={retrainLoading}>
                       <RefreshCw size={12} className={retrainLoading ? styles.spinning : ''} />
                       <span>Huấn luyện lại SVD</span>
                     </button>
-                  </div>
-                  {retrainStatus && <div className={styles.retrainStatus}>{retrainStatus}</div>}
+                  </div>}
+                  {isAdmin && retrainStatus && <div className={styles.retrainStatus}>{retrainStatus}</div>}
                 </div>
 
                 <div className={styles.aiRecsWrapper}>
@@ -544,7 +530,6 @@ const HomePage = () => {
                   </h2>
                   <div className={styles.trackGrid}>
                     {trendingSongs.slice(0, 5).map((song) => {
-                      const isLiked = likedSongIds.has(song.track_id);
                       const cover = song.cover_url || getCoverImage(song.track_id);
                       return (
                         <div 
@@ -576,7 +561,7 @@ const HomePage = () => {
                     <Radio className={styles.titleIconGlow} size={22} /> Khám Phá Chủ Đề & Thể Loại
                   </h2>
                   <div className={styles.playlistGrid}>
-                    <div className={`${styles.playlistCard} glass-panel`} onClick={() => handleSelectGenrePlaylist("Lofi Chill-out", "lofi")}>
+                    <div className={`${styles.playlistCard} glass-panel`} onClick={() => handleSelectGenrePlaylist("lofi")}>
                       <div className={styles.playlistIconBox}>
                         <Music2 size={24} />
                       </div>
@@ -586,7 +571,7 @@ const HomePage = () => {
                       </div>
                     </div>
 
-                    <div className={`${styles.playlistCard} glass-panel`} onClick={() => handleSelectGenrePlaylist("Pop Populating", "pop")}>
+                    <div className={`${styles.playlistCard} glass-panel`} onClick={() => handleSelectGenrePlaylist("pop")}>
                       <div className={styles.playlistIconBox} style={{ background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)' }}>
                         <Disc size={24} />
                       </div>
