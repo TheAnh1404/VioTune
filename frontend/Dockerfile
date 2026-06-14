@@ -20,7 +20,7 @@ ENV REACT_APP_API_URL=$REACT_APP_API_URL \
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 COPY . .
 RUN npm run build
 
