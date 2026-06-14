@@ -18,10 +18,10 @@ const ProtectedRoute = ({ children }) => {
         height: '100vh',
         background: '#0a0a0f',
         color: '#fff',
-        fontSize: '18px',
-        fontFamily: 'Inter, sans-serif'
+        fontSize: 'var(--text-body-lg)',
+        fontFamily: 'var(--font-primary)'
       }}>
-        <span style={{ marginRight: '12px', fontSize: '28px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>♪</span>
+        <span style={{ marginRight: '12px', fontSize: 'var(--text-heading-lg)', animation: 'spin 1s linear infinite', display: 'inline-block' }}>♪</span>
         Loading VioTune...
       </div>
     );

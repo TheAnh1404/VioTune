@@ -39,9 +39,9 @@
 
 .title {
     color: #ffffff;
-    font-size: 24px;
-    font-weight: 700;
+    font-size: var(--text-heading-md);
+    font-weight: var(--weight-bold);
     margin: 0;
-    font-family: 'Inter', sans-serif;
-    letter-spacing: -0.5px;
+    font-family: var(--font-primary);
+    letter-spacing: var(--tracking-tight);
 }

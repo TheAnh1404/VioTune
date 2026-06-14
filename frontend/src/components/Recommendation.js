@@ -231,7 +231,7 @@ function Recommendation() {
                         onClick={() => selectSong(song)}
                         className={styles.dropdownItem}
                       >
-                        <strong>{song.track_name}</strong> - {song.artists} <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({song.track_genre})</span>
+                        <strong>{song.track_name}</strong> - {song.artists} <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-micro)' }}>({song.track_genre})</span>
                       </div>
                     ))}
                   </div>

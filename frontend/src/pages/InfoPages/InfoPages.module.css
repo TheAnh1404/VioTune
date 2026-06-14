@@ -53,13 +53,13 @@
 
 .pageHeader h1 {
   font-family: var(--font-display);
-  font-size: 48px;
-  font-weight: 800;
+  font-size: var(--text-display);
+  font-weight: var(--weight-extrabold);
   margin-bottom: 16px;
 }
 
 .pageHeader p {
-  font-size: 18px;
+  font-size: var(--text-body-lg);
   color: var(--text-secondary);
   max-width: 600px;
   margin: 0 auto;
@@ -72,15 +72,15 @@
 
 .infoCard h2 {
   font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 700;
+  font-size: var(--text-heading-lg);
+  font-weight: var(--weight-bold);
   margin-bottom: 24px;
   color: var(--accent-secondary);
 }
 
 .infoCard p {
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: var(--text-body);
+  line-height: var(--leading-normal);
   color: var(--text-secondary);
   margin-bottom: 16px;
 }
@@ -143,16 +143,16 @@
 }
 
 .faqQuestion {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .faqAnswer {
-  font-size: 15px;
+  font-size: var(--text-body-sm);
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 .backBtn {
@@ -162,7 +162,7 @@
   margin-bottom: 32px;
   color: var(--accent-secondary);
   text-decoration: none;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 

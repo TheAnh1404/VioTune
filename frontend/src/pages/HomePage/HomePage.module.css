@@ -82,8 +82,8 @@
 
 .welcomeText h1 {
   font-family: var(--font-display);
-  font-size: 32px;
-  font-weight: 800;
+  font-size: var(--text-heading-xl);
+  font-weight: var(--weight-extrabold);
   margin-bottom: 8px;
 }
 
@@ -104,8 +104,8 @@
   border-radius: 30px;
   background: var(--glass-highlight);
   border: 1px solid var(--glass-border);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
 }
 
 /* Grid Layout */
@@ -162,8 +162,8 @@
 }
 
 .tunerHeader {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   display: flex;
   justify-content: space-between;
 }
@@ -175,10 +175,10 @@
 }
 
 .tunerLabel {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-muted);
   text-transform: uppercase;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .seedPillList {
@@ -195,8 +195,8 @@
   background: var(--accent-primary);
   color: white;
   border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
   box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
 }
 
@@ -217,7 +217,7 @@
 }
 
 .noSeedText {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--text-muted);
   font-style: italic;
 }
@@ -241,7 +241,7 @@
   border: 1px solid var(--glass-border);
   border-radius: 10px;
   color: white;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 
 .seedSearchDropdown {
@@ -276,12 +276,12 @@
 }
 
 .dropdownTitle {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
 }
 
 .dropdownArtist {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
 }
 
@@ -302,8 +302,8 @@
   border: 1px solid var(--glass-border);
   border-radius: 8px;
   color: white;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 
@@ -334,7 +334,7 @@
 .tunerLabelRow {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
 }
 
@@ -352,8 +352,8 @@
 }
 
 .recsHeader h4 {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   color: var(--text-secondary);
 }
 
@@ -391,15 +391,15 @@
 }
 
 .recName {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .recArtist {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
 }
 
@@ -422,8 +422,8 @@
 }
 
 .sectionTitle {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: var(--text-heading-md);
+  font-weight: var(--weight-extrabold);
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -490,13 +490,13 @@
 }
 
 .trackNameText {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-bold);
   margin-bottom: 4px;
 }
 
 .trackArtistText {
-  font-size: 13px;
+  font-size: var(--text-label);
   color: var(--text-secondary);
 }
 
@@ -526,13 +526,13 @@
 }
 
 .playlistInfo h4 {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
   margin-bottom: 4px;
 }
 
 .playlistInfo p {
-  font-size: 13px;
+  font-size: var(--text-label);
   color: var(--text-secondary);
 }
 
@@ -552,7 +552,7 @@
   color: var(--accent-primary);
   padding: 6px 12px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: var(--text-micro);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -565,7 +565,7 @@
 }
 
 .retrainStatus {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--accent-secondary);
   text-align: right;
 }

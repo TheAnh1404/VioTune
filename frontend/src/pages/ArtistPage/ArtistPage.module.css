@@ -54,8 +54,8 @@
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -94,11 +94,11 @@
   align-items: center;
   gap: 6px;
   align-self: flex-start;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
   color: var(--accent-secondary);
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: var(--tracking-wider);
   background: rgba(6, 182, 212, 0.1);
   padding: 4px 10px;
   border-radius: 20px;
@@ -111,10 +111,10 @@
 
 .artistTitleName {
   font-family: var(--font-display);
-  font-size: 44px;
-  font-weight: 900;
-  letter-spacing: -1px;
-  line-height: 1.1;
+  font-size: var(--text-display);
+  font-weight: var(--weight-extrabold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
   text-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
@@ -125,8 +125,8 @@
 }
 
 .genreChip {
-  font-size: 10px;
-  font-weight: 600;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -135,7 +135,7 @@
 }
 
 .listenerStats {
-  font-size: 13px;
+  font-size: var(--text-label);
   color: var(--text-secondary);
 }
 
@@ -159,8 +159,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
   text-transform: uppercase;
   color: var(--text-secondary);
 }
@@ -187,8 +187,8 @@
 
 .featuredTitle {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-extrabold);
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -196,15 +196,15 @@
 }
 
 .featuredArtist {
-  font-size: 13px;
+  font-size: var(--text-label);
   color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
 .featuredBadge {
   align-self: flex-start;
-  font-size: 9px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
   color: var(--accent-secondary);
   background: rgba(6, 182, 212, 0.08);
   padding: 2px 6px;
@@ -221,8 +221,8 @@
   background: var(--text-primary);
   color: var(--bg-deep);
   border: none;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -249,14 +249,14 @@
 }
 
 .dnaMiniLabel {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
 }
 
 .dnaMiniValue {
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
   color: var(--accent-secondary);
 }
 
@@ -276,8 +276,8 @@
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   position: relative;
   transition: all 0.2s;
@@ -317,8 +317,8 @@
   grid-template-columns: 50px 2fr 1.2fr 1.2fr 100px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--glass-border);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
   color: var(--text-muted);
   text-transform: uppercase;
 }
@@ -343,7 +343,7 @@
 }
 
 .colIndex {
-  font-size: 13px;
+  font-size: var(--text-label);
   color: var(--text-muted);
 }
 
@@ -368,8 +368,8 @@
 }
 
 .songName {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -377,17 +377,17 @@
 }
 
 .songArtist {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
 }
 
 .colGenre {
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 
 .genreBadge {
-  font-size: 9px;
-  font-weight: 600;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
   color: var(--accent-secondary);
   background: rgba(6, 182, 212, 0.08);
   border: 1px solid rgba(6, 182, 212, 0.15);
@@ -461,8 +461,8 @@
 }
 
 .dropdownHeader {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
   color: var(--text-muted);
   padding: 8px 10px;
   text-transform: uppercase;
@@ -473,7 +473,7 @@
 .dropdownItem {
   padding: 8px 10px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--text-primary);
   cursor: pointer;
   transition: background 0.2s;
@@ -488,7 +488,7 @@
 
 .noPlaylistsMsg {
   padding: 8px 10px;
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--accent-secondary);
   cursor: pointer;
   text-align: center;
@@ -502,8 +502,8 @@
 
 .dnaTitle {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-bold);
   margin-bottom: 6px;
   display: flex;
   align-items: center;
@@ -511,7 +511,7 @@
 }
 
 .dnaSubtitle {
-  font-size: 13px;
+  font-size: var(--text-label);
   color: var(--text-secondary);
   margin-bottom: 24px;
 }
@@ -531,8 +531,8 @@
 .meterInfo {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
 }
 
 .meterName {
@@ -562,7 +562,7 @@
 .valenceBar { background: linear-gradient(90deg, var(--accent-tertiary), #ec4899); }
 
 .meterDesc {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-muted);
 }
 
@@ -585,13 +585,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .biographyText {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
   color: var(--text-secondary);
 }
 
@@ -617,15 +617,15 @@
 }
 
 .statBoxText h4 {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .statBoxText p {
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
 }
 
 /* Loader spinner */
@@ -668,8 +668,8 @@
   background: var(--accent-secondary);
   color: white;
   border: none;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -689,8 +689,8 @@
   align-items: center;
   gap: 10px;
   animation: floatGlow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
 }
 
 .success { border-color: rgba(16, 185, 129, 0.3); color: var(--accent-success); }
@@ -709,7 +709,7 @@
     padding: 20px;
   }
   .artistTitleName {
-    font-size: 28px;
+    font-size: var(--text-heading-lg);
   }
   .songRow {
     grid-template-columns: 40px 1fr 60px;

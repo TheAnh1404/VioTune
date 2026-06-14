@@ -1,7 +1,7 @@
 .sectionContainer {
     padding: 20px 0;
     color: white;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-primary);
 }
 
 .header {
@@ -12,15 +12,15 @@
 }
 
 .title {
-    font-size: 28px;
-    font-weight: 600;
+    font-size: var(--text-heading-lg);
+    font-weight: var(--weight-semibold);
     color: #e2e8f0;
 }
 
 .seeAll {
     color: #a0aec0;
     cursor: pointer;
-    font-size: 16px;
+    font-size: var(--text-body);
     transition: color 0.2s;
 }
 
@@ -79,13 +79,13 @@
 }
 
 .itemName {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: var(--text-body-lg);
+    font-weight: var(--weight-semibold);
     margin: 0;
 }
 
 .itemInfo {
-    font-size: 13px;
+    font-size: var(--text-label);
     color: #cbd5e0;
     margin-top: 4px;
 }

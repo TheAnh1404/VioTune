@@ -99,7 +99,7 @@ const ContactPage = () => {
                 <div className={styles.iconCircle} style={{ margin: '0 auto 16px' }}>
                   <Globe size={28} />
                 </div>
-                <p style={{ color: 'var(--accent-secondary)', fontWeight: 700 }}>www.viotune.com</p>
+                <p style={{ color: 'var(--accent-secondary)', fontWeight: 'var(--weight-bold)' }}>www.viotune.com</p>
               </div>
             </div>
             

@@ -1,7 +1,7 @@
 .sectionContainer {
     padding: 20px 0;
     color: white;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-primary);
 }
 
 .header {
@@ -12,14 +12,14 @@
 }
 
 .title {
-    font-size: 28px;
-    font-weight: 600;
+    font-size: var(--text-heading-lg);
+    font-weight: var(--weight-semibold);
 }
 
 .seeAll {
     color: #a0aec0;
     cursor: pointer;
-    font-size: 16px;
+    font-size: var(--text-body);
 }
 
 .grid {
@@ -94,8 +94,8 @@
 }
 
 .songTitle {
-    font-size: 20px;
-    font-weight: 600;
+    font-size: var(--text-heading-sm);
+    font-weight: var(--weight-semibold);
     margin: 0 0 5px 0;
     white-space: nowrap;
     overflow: hidden;
@@ -104,7 +104,7 @@
 }
 
 .artistName {
-    font-size: 15px;
+    font-size: var(--text-body-sm);
     color: #a0aec0;
 }
 

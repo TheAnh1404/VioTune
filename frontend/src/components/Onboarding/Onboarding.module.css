@@ -7,7 +7,7 @@
   background-color: #050a1e; /* Màu nền tối sâu */
   position: relative;
   overflow: hidden;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-primary);
 }
 
 /* Các gợn sóng xanh mờ phía sau */
@@ -63,14 +63,14 @@
 
 .title {
   color: #ffffff;
-  font-size: 3rem;
-  font-weight: 400;
-  letter-spacing: 1px;
+  font-size: var(--text-display);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-wide);
   margin: 0;
 }
 
 .boldText {
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: #d1d5db; /* Màu sáng hơn một chút cho chữ Tune */
 }
 

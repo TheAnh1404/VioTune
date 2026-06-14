@@ -1,7 +1,7 @@
 .sectionContainer {
     padding: 20px 0;
     color: white;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-primary);
 }
 
 .header {
@@ -12,14 +12,14 @@
 }
 
 .title {
-    font-size: 28px;
-    font-weight: 600;
+    font-size: var(--text-heading-lg);
+    font-weight: var(--weight-semibold);
 }
 
 .seeAll {
     color: #a0aec0;
     cursor: pointer;
-    font-size: 16px;
+    font-size: var(--text-body);
 }
 
 .list {
@@ -63,13 +63,13 @@
 }
 
 .songName {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: var(--text-body-lg);
+    font-weight: var(--weight-semibold);
     margin: 0;
 }
 
 .artistName {
-    font-size: 14px;
+    font-size: var(--text-sm);
     color: #a0aec0;
     margin: 0;
 }
@@ -78,14 +78,14 @@
     flex: 2;
     text-align: center;
     color: #cbd5e0;
-    font-size: 15px;
+    font-size: var(--text-body-sm);
 }
 
 .duration {
     flex: 1;
     text-align: right;
     color: #a0aec0;
-    font-size: 14px;
+    font-size: var(--text-sm);
     padding-right: 30px;
 }
 

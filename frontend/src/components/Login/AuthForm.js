@@ -43,7 +43,7 @@ const AuthForm = ({ type, title, subtitle, inputs, buttonText, showForgot, onFor
         {error && (
           <div style={{
             color: '#ff6b6b',
-            fontSize: '13px',
+            fontSize: 'var(--text-label)',
             padding: '8px 12px',
             background: 'rgba(255,107,107,0.1)',
             borderRadius: '8px',

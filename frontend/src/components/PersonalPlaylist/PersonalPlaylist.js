@@ -38,7 +38,7 @@ const PlaylistCard = ({ song, onPlaySong, isLiked, onLikeSong }) => {
       <div className={styles.overlay}>
         <h4 className={styles.playlistName}>{song.track_name}</h4>
         <span className={styles.trackCount}>{song.artists}</span>
-        <span className={styles.trackCount} style={{ fontSize: '11px', color: '#7f9cf5', marginTop: '2px' }}>
+        <span className={styles.trackCount} style={{ fontSize: 'var(--text-micro)', color: '#7f9cf5', marginTop: '2px' }}>
           {song.track_genre}
         </span>
       </div>
