@@ -79,13 +79,16 @@ VioTune/
 ### 1. Cấu hình Backend (FastAPI)
 
 1.  Di chuyển vào thư mục backend: `cd recommendation`
-2.  Kích hoạt môi trường ảo:
+2.  **Lựa chọn 1: Kích hoạt môi trường ảo (Khuyên dùng)**
     - PowerShell: `..\.venv\Scripts\Activate.ps1`
     - CMD: `..\.venv\Scripts\activate.bat`
     - Linux/macOS: `source ../.venv/bin/activate`
-3.  Cài đặt thư viện: `pip install -r requirements.txt`
-4.  Chạy Server: `uvicorn api.app:app --reload`
-    *(API sẽ chạy tại `http://localhost:8000`)*
+    - Sau đó chạy: `uvicorn api.app:app --reload`
+3.  **Lựa chọn 2: Chạy trực tiếp (Không cần kích hoạt)**
+    - Windows (PowerShell/CMD): `..\.venv\Scripts\uvicorn api.app:app --reload`
+    - Linux/macOS: `../.venv/bin/uvicorn api.app:app --reload`
+
+*(API sẽ mặc định chạy tại `http://localhost:8000`)*
 
 ### 2. Cấu hình Frontend (React)
 
