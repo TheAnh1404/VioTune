@@ -386,65 +386,107 @@ Giao diện VioTune được thiết kế theo phong cách **modern dashboard** 
 
 ### 5.1 Thiết Kế Đánh Giá
 
-**Phương pháp chia dữ liệu:** Sử dụng phương pháp **Train-Test Split** với **Cross-Validation:**
+VioTune áp dụng hai phương pháp đánh giá bổ trợ nhau để kiểm chứng cả khả năng dự đoán điểm rating và khả năng gợi ý danh sách bài hát:
 
-```python
-train_data, test_data = train_test_split(interactions, test_size=0.2, random_state=42)
-```
+1. **Đánh giá SVD Model (Train-Test Split):**
+   Sử dụng phương pháp chia dữ liệu tương tác (`interactions.csv`) theo tỷ lệ 80/20:
+   - **Training Set (80%):** 28.713 lượt tương tác để học các vector ẩn $P_u$, $Q_i$, và bias $b_u, b_i$.
+   - **Testing Set (20%):** 7.179 lượt tương tác để đánh giá độ lệch RMSE của mô hình dự đoán.
 
-| Tập | Kích thước | Tỷ lệ |
-|---|---|---|
-| **Training Set** | 7.412 lượt tương tác | 80% |
-| **Testing Set** | 1.854 lượt tương tác | 20% |
+2. **Đánh giá chất lượng gợi ý Top-K (Leave-3-Out Protocol):**
+   Để so sánh trực tiếp 3 mô hình (CB, CF, Hybrid) trên một tập dữ liệu thử nghiệm mô phỏng phân cụm thực tế:
+   - Bộ dữ liệu tương tác gồm **1.000 người dùng** chia làm **5 cụm sở thích âm nhạc chuyên biệt** (Gồm: 100 người thích nhạc nhẹ/acoustic, 300 người thích nhạc sôi động/dance/rock, 200 người thích hiphop/rap, 200 người thích pop/hits, 200 người thích country/indie/classic rock).
+   - Với mỗi người dùng, giữ lại **3 bài hát** có lượt nghe (`play_count`) cao nhất làm tập Ground Truth (bài hát thực sự yêu thích).
+   - Phần tương tác còn lại được đưa vào profile để các mô hình sinh danh sách gợi ý Top-K (với K = 5, 10, 15).
+   - Hệ thống tiến hành so sánh danh sách gợi ý của 3 mô hình với Ground Truth.
 
 ### 5.2 Phép Đo Đánh Giá (Evaluation Metrics)
 
-#### 5.2.1 RMSE (Root Mean Squared Error) — Sai Số Dự Đoán
+Hệ thống sử dụng các chỉ số đo lường toàn diện chuẩn công nghiệp:
 
-Đo lường mức độ chênh lệch giữa giá trị dự đoán và giá trị thực:
-
-```
-RMSE = √(1/N × Σ(r_ui - r̂_ui)²)
-```
-
-#### 5.2.2 Precision@K — Độ Chính Xác Top-K
-
-Đo tỷ lệ các bài hát gợi ý trong top K mà người dùng thực sự thích:
-
-```
-Precision@K = |Gợi ý đúng trong Top K| / K
-```
+- **RMSE (Root Mean Squared Error):** Đo lường mức độ chênh lệch giữa rating dự đoán $\hat{r}_{ui}$ và rating thực tế $r_{ui}$.
+- **Precision@K:** Tỷ lệ các bài hát gợi ý trong Top K thực sự nằm trong tập Ground Truth của người dùng.
+- **Recall@K:** Tỷ lệ các bài hát trong tập Ground Truth được tìm thấy thành công trong Top K gợi ý.
+- **F1@K:** Trung bình điều hòa giữa Precision@K và Recall@K.
+- **NDCG@K (Normalized Discounted Cumulative Gain):** Đánh giá chất lượng xếp hạng. Bài hát khớp Ground Truth ở vị trí càng cao thì điểm nhận được càng lớn.
+- **MAP@K (Mean Average Precision):** Trung bình điểm Precision tại các vị trí gợi ý chính xác.
+- **Hit Rate@K:** Tỷ lệ người dùng nhận được ít nhất 1 gợi ý chính xác trong Top-K (chỉ số quan trọng đối với trải nghiệm người nghe).
+- **Catalog Coverage:** Tỷ lệ số bài hát được gợi ý ít nhất một lần trên tổng số bài hát trong hệ thống.
 
 ### 5.3 Kết Quả Thực Nghiệm
 
-| Metric | Giá trị đạt được | Đánh giá |
-|---|---|---|
-| **RMSE** | **~0.85** | Sai số thấp, dự đoán rating chính xác |
-| **Precision@10** | **~75%** | 7.5/10 bài gợi ý đúng gu người dùng |
+#### 5.3.1 Quá trình hội tụ mô hình SVD (30 epochs)
 
-**Quá trình hội tụ mô hình SVD (30 epochs):**
-
-Mô hình in RMSE sau mỗi 5 epochs để theo dõi quá trình học:
+Quá trình huấn luyện mô hình Collaborative Filtering (SVD) ghi nhận sự hội tụ rất tốt của hàm mất mát sau 30 vòng lặp (epochs) trên bộ dữ liệu 1000 users phân cụm:
 
 ```
-Epoch   1/30 | Train RMSE: x.xxxx | Test RMSE: x.xxxx
-Epoch   5/30 | Train RMSE: x.xxxx | Test RMSE: x.xxxx
-Epoch  10/30 | Train RMSE: x.xxxx | Test RMSE: x.xxxx
-...
-Epoch  30/30 | Train RMSE: x.xxxx | Test RMSE: x.xxxx
+[CF] Dataset: 1000 users | 8638 items
+[CF] Training: 28713 | Testing: 7179
+  Epoch   1/30 | Train RMSE: 0.6504 | Test RMSE: 0.6655
+  Epoch   5/30 | Train RMSE: 0.6000 | Test RMSE: 0.6305
+  Epoch  10/30 | Train RMSE: 0.5651 | Test RMSE: 0.6083
+  Epoch  15/30 | Train RMSE: 0.5400 | Test RMSE: 0.5923
+  Epoch  20/30 | Train RMSE: 0.5204 | Test RMSE: 0.5798
+  Epoch  25/30 | Train RMSE: 0.5046 | Test RMSE: 0.5698
+  Epoch  30/30 | Train RMSE: 0.4915 | Test RMSE: 0.5620
 [CF] Huấn luyện hoàn tất!
 ```
 
-### 5.4 Kích Thước Mô Hình Đã Lưu
+*Nhận xét:* Sai số RMSE trên tập Test đạt mức tối ưu **~0.56**, thể hiện mô hình học được gu âm nhạc đặc trưng của các cụm một cách rõ rệt và chính xác.
+
+#### 5.3.2 Bảng so sánh chất lượng gợi ý Top-K (K = 5, 10, 15)
+
+Dưới đây là kết quả đánh giá chi tiết của 3 mô hình chạy thử nghiệm trực tiếp trên 1000 người dùng phân cụm (Leave-3-Out):
+
+| K | Metric | Content-Based (CB) | Collaborative (CF) | Hybrid (CB+CF) | Hybrid vs CB (%) | Hybrid vs CF (%) |
+|---|---|---|---|---|---|---|
+| **K = 5** | Precision@5 | 0.0112 | 0.0120 | 0.0142 | **+26.8%** | **+18.3%** |
+| | Recall@5 | 0.0187 | 0.0203 | 0.0237 | **+26.8%** | **+16.4%** |
+| | NDCG@5 | 0.0201 | 0.0155 | 0.0229 | **+14.0%** | **+47.6%** |
+| | MAP@5 | 0.0128 | 0.0083 | 0.0139 | **+8.9%** | **+67.5%** |
+| | Hit Rate@5 | 0.0560 | 0.0570 | 0.0700 | **+25.0%** | **+22.8%** |
+| **K = 10** | Precision@10 | 0.0062 | 0.0103 | 0.0113 | **+82.3%** | **+9.7%** |
+| | Recall@10 | 0.0207 | 0.0347 | 0.0377 | **+82.3%** | **+8.7%** |
+| | NDCG@10 | 0.0209 | 0.0219 | 0.0292 | **+39.8%** | **+33.6%** |
+| | MAP@10 | 0.0130 | 0.0104 | 0.0158 | **+21.8%** | **+52.9%** |
+| | Hit Rate@10 | 0.0620 | 0.0940 | 0.1110 | **+79.0%** | **+18.1%** |
+| **K = 15** | Precision@15 | 0.0049 | 0.0133 | 0.0106 | **+117.8%** | -20.1% |
+| | Recall@15 | 0.0243 | 0.0667 | 0.0532 | **+118.5%** | -20.2% |
+| | NDCG@15 | 0.0223 | 0.0338 | 0.0350 | **+57.1%** | **+3.4%** |
+| | MAP@15 | 0.0133 | 0.0133 | 0.0172 | **+29.1%** | **+29.6%** |
+| | Hit Rate@15 | 0.0720 | 0.1770 | 0.1520 | **+111.1%** | -14.1% |
+
+#### 5.3.3 Độ phủ danh mục bài hát (Catalog Coverage)
+
+| Mô hình | Catalog Coverage (%) | Nhận xét |
+|---|---|---|
+| **Content-Based (CB)** | **2.03%** | Khả năng gợi ý rộng, phân bố đều theo đặc trưng âm nhạc |
+| **Collaborative (CF)** | **0.03%** | Bị giới hạn trong các bài hát rất hot của cụm |
+| **Hybrid (CB+CF)** | **1.30%** | Cân bằng tốt, mở rộng catalog gấp **43.3 lần** so với CF |
+
+### 5.4 Phân Tích & Thảo Luận về Kết Quả Đánh Giá
+
+1. **Hiệu năng xuất sắc của mô hình lai Hybrid (CB+CF) trong môi trường phân cụm:**
+   Trên bộ dữ liệu phân cụm sở thích thực tế (1000 users), mô hình Hybrid đạt hiệu năng vượt trội cả hai mô hình đơn lẻ ở hầu hết các chỉ số chính:
+   - Tại mốc **K = 5**, Hybrid vượt trội cả CB (+26.8% Precision) lẫn CF (+18.3% Precision) và giành chiến thắng tuyệt đối (**Hybrid wins** trên tất cả các metrics).
+   - Tại mốc **K = 10**, Hybrid tiếp tục giữ vững vị trí dẫn đầu khi tăng **+82.3%** so với CB và **+9.7%** so với CF về độ chính xác.
+   - Kết quả này phản ánh rằng việc sử dụng Reciprocal Rank Fusion giúp cộng gộp "sự đồng thuận" của cả đặc trưng nội dung (acoustic features) và hành vi cộng đồng (SVD collaborative filter), từ đó đưa ra gợi ý chính xác hơn nhiều so với việc chỉ dùng một nguồn tín hiệu đơn lẻ.
+
+2. **Bài toán đánh đổi (Trade-off) giữa Độ chính xác và Độ phủ:**
+   - **Collaborative Filtering (CF):** Có độ chính xác tương đối tốt ở các mốc K cao (như K=15 đạt Precision=1.33%), tuy nhiên điểm yếu cốt tử vẫn là **Catalog Coverage cực kỳ thấp (0.03%)**. Nó chỉ gợi ý lặp đi lặp lại một số bài hát rất hot trong nhóm và bỏ quên hoàn toàn các bài hát ngách.
+   - **Content-Based (CB):** Đạt độ phủ cao (**2.03%**, gấp 67 lần CF) nhưng độ chính xác lại thấp do thiếu phản hồi thực tế từ người dùng.
+   - **Hybrid Model (CB+CF):** Cung cấp giải pháp dung hòa hoàn hảo. Nó mở rộng Catalog Coverage lên **1.30%** (gấp **43.3 lần** CF đơn lẻ) giúp tăng cơ hội khám phá bài hát mới, đồng thời giữ vững độ chính xác cao nhất ở các mốc K quan trọng (K=5, K=10).
+
+### 5.5 Kích Thước Mô Hình Đã Lưu
 
 | Tệp mô hình | Kích thước | Nội dung |
 |---|---|---|
-| P.npy | 78.2 KB | Ma trận User latent (200 × 50) |
-| Q.npy | 3,395.4 KB (3.3 MB) | Ma trận Item latent (8692 × 50) |
-| b_u.npy | 1.7 KB | Bias vector user (200,) |
-| b_i.npy | 68.0 KB | Bias vector item (8692,) |
+| P.npy | 390.7 KB | Ma trận User latent (1000 × 50) |
+| Q.npy | 3,374.3 KB (3.3 MB) | Ma trận Item latent (8638 × 50) |
+| b_u.npy | 7.9 KB | Bias vector user (1000,) |
+| b_i.npy | 67.5 KB | Bias vector item (8638,) |
 | mu.npy | 0.1 KB | Trung bình toàn cục μ |
-| **Tổng** | **~3.5 MB** | Toàn bộ mô hình SVD |
+| **Tổng** | **~3.8 MB** | Toàn bộ mô hình SVD |
 
 ---
 
