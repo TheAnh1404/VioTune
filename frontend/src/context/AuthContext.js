@@ -8,11 +8,13 @@ import {
   sendPasswordResetEmail, 
   updateProfile, 
   onAuthStateChanged,
+  getIdTokenResult,
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider
 } from 'firebase/auth';
 import { API_URL } from '../config';
+import { authenticatedFetch } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -27,22 +29,39 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);    // Initial auth check loading status
   const [likedSongsList, setLikedSongsList] = useState([]);
   const [likedSongIds, setLikedSongIds] = useState(new Set());
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // ── Lắng nghe sự thay đổi trạng thái đăng nhập từ Firebase Auth ──────────────────
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        let tokenResult = { claims: {} };
+        try {
+          tokenResult = await getIdTokenResult(firebaseUser);
+        } catch (err) {
+          console.warn("Failed to load Firebase token claims:", err);
+        }
         const u = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName || 'VioTune User'
         };
         setUser(u);
+        setIsAdmin(tokenResult.claims.admin === true);
         localStorage.setItem('viotune_user', JSON.stringify(u));
         
-        // Tải danh sách bài hát yêu thích từ backend
         try {
-          const res = await fetch(`${API_URL}/songs/liked?user_id=${firebaseUser.uid}`);
+          await authenticatedFetch(`${API_URL}/api/users/me`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ displayName: u.displayName })
+          });
+        } catch (err) {
+          console.warn("Failed to synchronize the backend user profile:", err);
+        }
+
+        try {
+          const res = await authenticatedFetch(`${API_URL}/songs/liked?user_id=${firebaseUser.uid}`);
           const json = await res.json();
           if (json.status === "success") {
             setLikedSongsList(json.data);
@@ -53,6 +72,7 @@ export const AuthProvider = ({ children }) => {
         }
       } else {
         setUser(null);
+        setIsAdmin(false);
         setLikedSongsList([]);
         setLikedSongIds(new Set());
         localStorage.removeItem('viotune_user');
@@ -77,17 +97,6 @@ export const AuthProvider = ({ children }) => {
       displayName: displayName
     };
     
-    // Đồng bộ thông tin người dùng sang Firestore backend để kích hoạt test user và lưu trữ
-    try {
-      await fetch(`${API_URL}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, displayName })
-      });
-    } catch (backendErr) {
-      console.warn("Failed to synchronize user to backend users collection:", backendErr);
-    }
-    
     setUser(newUser);
     localStorage.setItem('viotune_user', JSON.stringify(newUser));
     setLikedSongsList([]);
@@ -111,7 +120,7 @@ export const AuthProvider = ({ children }) => {
     
     // Tải danh sách yêu thích
     try {
-      const likedRes = await fetch(`${API_URL}/songs/liked?user_id=${firebaseUser.uid}`);
+      const likedRes = await authenticatedFetch(`${API_URL}/songs/liked?user_id=${firebaseUser.uid}`);
       const likedJson = await likedRes.json();
       if (likedJson.status === "success") {
         setLikedSongsList(likedJson.data);
@@ -136,21 +145,6 @@ export const AuthProvider = ({ children }) => {
       displayName: firebaseUser.displayName || 'Google User'
     };
     
-    // Đồng bộ thông tin sang FastAPI Firestore backend
-    try {
-      await fetch(`${API_URL}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: firebaseUser.email, 
-          password: 'social-auth-placeholder-password',
-          displayName: loggedUser.displayName 
-        })
-      });
-    } catch (backendErr) {
-      console.warn("Failed to synchronize Google user to backend:", backendErr);
-    }
-    
     setUser(loggedUser);
     localStorage.setItem('viotune_user', JSON.stringify(loggedUser));
     return loggedUser;
@@ -167,21 +161,6 @@ export const AuthProvider = ({ children }) => {
       email: firebaseUser.email || 'facebook-user@viotune.com',
       displayName: firebaseUser.displayName || 'Facebook User'
     };
-    
-    // Đồng bộ thông tin sang FastAPI Firestore backend
-    try {
-      await fetch(`${API_URL}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: loggedUser.email, 
-          password: 'social-auth-placeholder-password',
-          displayName: loggedUser.displayName 
-        })
-      });
-    } catch (backendErr) {
-      console.warn("Failed to synchronize Facebook user to backend:", backendErr);
-    }
     
     setUser(loggedUser);
     localStorage.setItem('viotune_user', JSON.stringify(loggedUser));
@@ -214,7 +193,7 @@ export const AuthProvider = ({ children }) => {
     setLikedSongIds(prev => new Set([...prev, track.track_id]));
 
     try {
-      const res = await fetch(`${API_URL}/songs/${track.track_id}/like?user_id=${user.uid}`, {
+      const res = await authenticatedFetch(`${API_URL}/songs/${track.track_id}/like?user_id=${user.uid}`, {
         method: 'POST'
       });
       const json = await res.json();
@@ -249,7 +228,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     try {
-      const res = await fetch(`${API_URL}/songs/${trackId}/like?user_id=${user.uid}`, {
+      const res = await authenticatedFetch(`${API_URL}/songs/${trackId}/like?user_id=${user.uid}`, {
         method: 'DELETE'
       });
       const json = await res.json();
@@ -269,7 +248,7 @@ export const AuthProvider = ({ children }) => {
   const getLikedSongs = async () => {
     if (!user) return [];
     try {
-      const res = await fetch(`${API_URL}/songs/liked?user_id=${user.uid}`);
+      const res = await authenticatedFetch(`${API_URL}/songs/liked?user_id=${user.uid}`);
       const json = await res.json();
       return json.status === "success" ? json.data : [];
     } catch (err) {
@@ -282,7 +261,7 @@ export const AuthProvider = ({ children }) => {
   const recordPlay = async (track) => {
     if (!user) return;
     try {
-      await fetch(`${API_URL}/songs/${track.track_id}/play?user_id=${user.uid}`, {
+      await authenticatedFetch(`${API_URL}/songs/${track.track_id}/play?user_id=${user.uid}`, {
         method: 'POST'
       });
     } catch (err) {
@@ -294,7 +273,7 @@ export const AuthProvider = ({ children }) => {
   const getPlayHistory = async () => {
     if (!user) return [];
     try {
-      const res = await fetch(`${API_URL}/songs/history?user_id=${user.uid}`);
+      const res = await authenticatedFetch(`${API_URL}/songs/history?user_id=${user.uid}`);
       const json = await res.json();
       return json.status === "success" ? json.data : [];
     } catch (err) {
@@ -311,6 +290,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    isAdmin,
     loading,
     likedSongsList,
     likedSongIds,

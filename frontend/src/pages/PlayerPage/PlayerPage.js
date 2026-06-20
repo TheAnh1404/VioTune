@@ -62,8 +62,8 @@ const PlayerPage = () => {
   const userId = user?.uid || 'anonymous';
   
   const { 
-    currentSong, isPlaying, queue, currentIndex, duration, currentTime,
-    volume, setVolume, repeatMode, isShuffle, previewLoading, previewUrl,
+    currentSong, isPlaying, queue, duration, currentTime,
+    volume, setVolume, repeatMode, isShuffle, previewLoading,
     playSong, togglePlay, seek, nextSong, prevSong, toggleRepeat, toggleShuffle,
     setCurrentIndex, setCurrentSong
   } = usePlayback();

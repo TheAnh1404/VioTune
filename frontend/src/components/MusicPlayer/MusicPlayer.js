@@ -128,7 +128,7 @@ const MusicPlayer = ({
           <div className={styles.playPauseBtn} onClick={!previewLoading ? onTogglePlay : undefined} 
             style={{ cursor: previewLoading ? 'wait' : 'pointer', opacity: previewLoading ? 0.6 : 1 }}>
             {previewLoading ? (
-              <span style={{ fontSize: '22px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
+              <span style={{ fontSize: 'var(--text-heading-md)', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
             ) : isPlaying && currentSong ? (
               <Pause size={30} fill="currentColor" />
             ) : (

@@ -108,19 +108,19 @@ const iconContainerStyle = {
 };
 
 const titleStyle = {
-  fontSize: '18px',
-  fontWeight: '700',
+  fontSize: 'var(--text-body-lg)',
+  fontWeight: 'var(--weight-bold)',
   color: '#fff',
   margin: '0 0 8px 0',
-  fontFamily: 'system-ui, -apple-system, sans-serif',
+  fontFamily: 'var(--font-primary)',
 };
 
 const descStyle = {
-  fontSize: '13px',
+  fontSize: 'var(--text-label)',
   color: '#94a3b8',
-  lineHeight: '1.6',
+  lineHeight: 'var(--leading-normal)',
   margin: '0 0 20px 0',
-  fontFamily: 'system-ui, -apple-system, sans-serif',
+  fontFamily: 'var(--font-primary)',
 };
 
 const debugStyle = {
@@ -129,12 +129,12 @@ const debugStyle = {
   border: '1px solid rgba(255, 255, 255, 0.08)',
   borderRadius: '8px',
   padding: '12px',
-  fontSize: '11px',
+  fontSize: 'var(--text-micro)',
   color: '#ef4444',
   textAlign: 'left',
   overflowX: 'auto',
   margin: '0 0 20px 0',
-  fontFamily: 'monospace',
+  fontFamily: 'var(--font-mono)',
 };
 
 const btnStyle = {
@@ -147,8 +147,8 @@ const btnStyle = {
   padding: '10px 20px',
   borderRadius: '30px',
   cursor: 'pointer',
-  fontSize: '13px',
-  fontWeight: '600',
+  fontSize: 'var(--text-label)',
+  fontWeight: 'var(--weight-semibold)',
   transition: 'all 0.2s',
 };
 

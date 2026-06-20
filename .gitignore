@@ -32,3 +32,10 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Local environment and runtime database files
+.env
+.tmp/
+*.db-shm
+*.db-wal
+*.db-journal

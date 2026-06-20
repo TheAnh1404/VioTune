@@ -75,7 +75,7 @@ const TrendingNow = ({ songs = [], title = "Trending Now", onPlaySong, currentSo
 
       <div className={styles.listContainer}>
         {isLoading ? (
-          <p style={{ color: '#1db954', padding: '30px', textAlign: 'center', fontWeight: '600', fontSize: '15px' }}>
+          <p style={{ color: '#1db954', padding: '30px', textAlign: 'center', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-body-sm)' }}>
             🔍 Searching tracks in database...
           </p>
         ) : songs.length === 0 ? (

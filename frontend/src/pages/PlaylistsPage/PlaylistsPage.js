@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePlayback } from '../../context/PlaybackContext';
@@ -8,9 +8,10 @@ import Footer from '../../components/Footer/Footer';
 import styles from './PlaylistsPage.module.css';
 import { 
   Play, Plus, Music, Trash2, Calendar, FolderHeart, 
-  Sparkles, ListMusic, AlertCircle, Heart 
+  Sparkles, ListMusic, AlertCircle
 } from 'lucide-react';
 import { API_URL } from '../../config';
+import { authenticatedFetch } from '../../api';
 
 const getCoverImage = (trackId) => {
   const images = [
@@ -58,16 +59,16 @@ const PlaylistsPage = () => {
   const [modalError, setModalError] = useState("");
 
   // Fetch playlists on mount
-  const fetchPlaylists = async () => {
+  const fetchPlaylists = useCallback(async () => {
     if (!user) return;
     setLoadingPlaylists(true);
     try {
-      const res = await fetch(`${API_URL}/users/${user.uid}/playlists`);
+      const res = await authenticatedFetch(`${API_URL}/users/${user.uid}/playlists`);
       const json = await res.json();
       if (json.status === "success") {
         setPlaylists(json.data);
-        if (json.data.length > 0 && !activePlaylist) {
-          setActivePlaylist(json.data[0]);
+        if (json.data.length > 0) {
+          setActivePlaylist(current => current || json.data[0]);
         }
       }
     } catch (err) {
@@ -75,11 +76,11 @@ const PlaylistsPage = () => {
     } finally {
       setLoadingPlaylists(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchPlaylists();
-  }, [user]); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchPlaylists]);
 
   // Load songs of active playlist
   useEffect(() => {
@@ -90,7 +91,7 @@ const PlaylistsPage = () => {
       }
       setLoadingSongs(true);
       try {
-        const res = await fetch(`${API_URL}/playlists/${activePlaylist.playlist_id}/songs`);
+        const res = await authenticatedFetch(`${API_URL}/playlists/${activePlaylist.playlist_id}/songs`);
         const json = await res.json();
         if (json.status === "success") {
           setPlaylistSongs(json.data);
@@ -113,7 +114,7 @@ const PlaylistsPage = () => {
     }
     setModalError("");
     try {
-      const res = await fetch(`${API_URL}/playlists`, {
+      const res = await authenticatedFetch(`${API_URL}/playlists`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -129,7 +130,7 @@ const PlaylistsPage = () => {
         setPlaylistDesc("");
         
         // Refresh lists and select newly created playlist
-        const updatedRes = await fetch(`${API_URL}/users/${user.uid}/playlists`);
+        const updatedRes = await authenticatedFetch(`${API_URL}/users/${user.uid}/playlists`);
         const updatedJson = await updatedRes.json();
         if (updatedJson.status === "success") {
           setPlaylists(updatedJson.data);
@@ -149,7 +150,7 @@ const PlaylistsPage = () => {
     e.stopPropagation();
     if (!activePlaylist) return;
     try {
-      const res = await fetch(`${API_URL}/playlists/${activePlaylist.playlist_id}/songs/${trackId}`, {
+      const res = await authenticatedFetch(`${API_URL}/playlists/${activePlaylist.playlist_id}/songs/${trackId}`, {
         method: 'DELETE'
       });
       const json = await res.json();

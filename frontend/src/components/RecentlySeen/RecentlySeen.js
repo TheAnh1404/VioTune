@@ -27,7 +27,7 @@ const ItemCard = ({ song, onPlaySong }) => {
       <div className={styles.overlay}>
         <h4 className={styles.itemName}>{song.track_name}</h4>
         <span className={styles.itemInfo}>{song.artists}</span>
-        <span className={styles.itemInfo} style={{ fontSize: '11px', color: '#34d399', marginTop: '2px' }}>
+        <span className={styles.itemInfo} style={{ fontSize: 'var(--text-micro)', color: '#34d399', marginTop: '2px' }}>
           {song.track_genre}
         </span>
       </div>
@@ -45,7 +45,7 @@ const RecentlySeen = ({ recentSongs = [], onPlaySong }) => {
       
       <div className={styles.grid}>
         {recentSongs.length === 0 ? (
-          <div style={{ color: '#64748b', padding: '30px 10px', fontSize: '13px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px', width: '100%' }}>
+          <div style={{ color: '#64748b', padding: '30px 10px', fontSize: 'var(--text-label)', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px', width: '100%' }}>
             No listening history yet. Start playing songs!
           </div>
         ) : (

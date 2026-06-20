@@ -198,7 +198,7 @@ const AuthPage = () => {
             {forgotSuccess && (
               <div style={{
                 color: '#4ade80',
-                fontSize: '13px',
+                fontSize: 'var(--text-label)',
                 padding: '8px 12px',
                 background: 'rgba(74,222,128,0.1)',
                 borderRadius: '8px',

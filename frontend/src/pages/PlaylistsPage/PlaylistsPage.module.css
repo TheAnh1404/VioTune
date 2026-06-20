@@ -74,8 +74,8 @@
 
 .colTitle {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-bold);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -95,8 +95,8 @@
   background: rgba(139, 92, 246, 0.1);
   border: 1px solid rgba(139, 92, 246, 0.2);
   color: #c4b5fd;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -169,8 +169,8 @@
 }
 
 .plName {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -178,7 +178,7 @@
 }
 
 .plDesc {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -228,8 +228,8 @@
 
 .noActivePlaylist h3, .noPlaylists h3 {
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--text-heading-sm);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
 }
 
@@ -239,8 +239,8 @@
   background: var(--accent-primary);
   color: white;
   border: none;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: var(--neon-glow-primary);
@@ -275,29 +275,29 @@
 }
 
 .bannerLabel {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
   color: var(--accent-secondary);
-  letter-spacing: 1.5px;
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
 }
 
 .bannerTitle {
   font-family: var(--font-display);
-  font-size: 32px;
-  font-weight: 800;
+  font-size: var(--text-heading-xl);
+  font-weight: var(--weight-extrabold);
   margin: 4px 0 8px 0;
-  letter-spacing: -0.5px;
+  letter-spacing: var(--tracking-tight);
 }
 
 .bannerDesc {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
 .bannerStats {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--text-muted);
 }
 
@@ -310,8 +310,8 @@
   background: var(--accent-primary);
   color: white;
   border: none;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   cursor: pointer;
   box-shadow: var(--neon-glow-primary);
   transition: all 0.2s;
@@ -337,11 +337,11 @@
   grid-template-columns: 50px 2fr 1.2fr 1.2fr 80px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--glass-border);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--tracking-wide);
 }
 
 .songRow {
@@ -364,7 +364,7 @@
 }
 
 .colIndex {
-  font-size: 13px;
+  font-size: var(--text-label);
   color: var(--text-muted);
   display: flex;
   align-items: center;
@@ -391,8 +391,8 @@
 }
 
 .songName {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -400,7 +400,7 @@
 }
 
 .songArtist {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -414,12 +414,12 @@
 }
 
 .colGenre {
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 
 .genreBadge {
-  font-size: 9px;
-  font-weight: 600;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
   color: var(--accent-secondary);
   background: rgba(6, 182, 212, 0.08);
   border: 1px solid rgba(6, 182, 212, 0.15);
@@ -428,7 +428,7 @@
 }
 
 .colDate {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -477,8 +477,8 @@
   background: var(--accent-secondary);
   color: white;
   border: none;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -521,15 +521,15 @@
 
 .modalHeader h3 {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-bold);
 }
 
 .closeModalBtn {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font-size: 24px;
+  font-size: var(--text-heading-md);
   cursor: pointer;
 }
 
@@ -546,8 +546,8 @@
 }
 
 .inputGroup label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
   color: var(--text-secondary);
 }
 
@@ -558,7 +558,7 @@
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
   outline: none;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 
 .inputGroup input:focus, .inputGroup textarea:focus {
@@ -578,8 +578,8 @@
   background: transparent;
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 
@@ -589,8 +589,8 @@
   background: var(--accent-primary);
   color: white;
   border: none;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 
@@ -599,7 +599,7 @@
   align-items: center;
   gap: 8px;
   color: var(--accent-danger);
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 
 /* Tablet / Mobile optimization */

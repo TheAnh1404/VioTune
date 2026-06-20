@@ -34,14 +34,14 @@
 }
 
 .title {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: var(--text-body-lg);
+    font-weight: var(--weight-semibold);
     color: white;
     margin: 0;
 }
 
 .artist {
-    font-size: 14px;
+    font-size: var(--text-sm);
     color: #a0aec0;
     margin-top: 4px;
 }
@@ -80,7 +80,7 @@
 }
 
 .time {
-    font-size: 12px;
+    font-size: var(--text-caption);
     color: #a0aec0;
     min-width: 40px;
 }

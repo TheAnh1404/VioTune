@@ -49,9 +49,9 @@
 
 .title {
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  font-size: var(--text-heading-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
   background: linear-gradient(135deg, #fff 30%, #cbd5e1 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -59,7 +59,7 @@
 
 .subtitle {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-label);
   margin-top: 2px;
 }
 
@@ -86,15 +86,15 @@
 
 .cardHeader h3 {
   font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }
 
 .cardDesc {
   color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.4;
+  font-size: var(--text-micro);
+  line-height: var(--leading-snug);
   margin-bottom: 16px;
 }
 
@@ -117,16 +117,16 @@
   border: 1px solid rgba(6, 182, 212, 0.15);
   border-radius: 8px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--accent-secondary);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   margin-bottom: 16px;
   text-align: center;
 }
 
 .genreBanner span {
   color: #fff;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .metricRow {
@@ -140,7 +140,7 @@
 .metricLabel {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
   margin-bottom: 5px;
 }
@@ -162,7 +162,7 @@
   color: var(--text-muted);
   text-align: center;
   padding: 40px 0;
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 
 /* Model retrain block */
@@ -178,16 +178,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   margin-bottom: 6px;
 }
 
 .retrainBox p {
   color: var(--text-muted);
-  font-size: 10px;
-  line-height: 1.4;
+  font-size: var(--text-micro);
+  line-height: var(--leading-snug);
   margin-bottom: 12px;
 }
 
@@ -202,8 +202,8 @@
   color: #c084fc;
   padding: 10px 14px;
   border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -216,7 +216,7 @@
 
 .retrainStatus {
   margin-top: 8px;
-  font-size: 10px;
+  font-size: var(--text-micro);
   color: var(--accent-tertiary);
   text-align: center;
 }
@@ -247,9 +247,9 @@
 }
 
 .seedSelectorGroup label {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .searchWrapper {
@@ -272,7 +272,7 @@
   color: #fff;
   padding: 10px 12px 10px 36px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   outline: none;
   transition: all 0.2s;
 }
@@ -319,13 +319,13 @@
 }
 
 .dropdownTitle {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
   color: #fff;
 }
 
 .dropdownArtist {
-  font-size: 10px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
 }
 
@@ -335,7 +335,7 @@
   color: #34d399;
   padding: 8px 12px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: var(--text-micro);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -347,7 +347,7 @@
   color: var(--text-secondary);
   padding: 2px 6px;
   border-radius: 10px;
-  font-size: 9px;
+  font-size: var(--text-micro);
   margin-left: auto;
 }
 
@@ -361,9 +361,9 @@
 .sliderLabelRow {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .alphaValue {
@@ -372,8 +372,8 @@
   color: #c084fc;
   padding: 1px 6px;
   border-radius: 10px;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
 }
 
 .rangeInput {
@@ -405,7 +405,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.04);
@@ -431,13 +431,13 @@
 
 .recsHeader h4 {
   font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }
 
 .loadingSpinner {
-  font-size: 16px;
+  font-size: var(--text-body);
   color: var(--accent-secondary);
   animation: spinLoader 1s linear infinite;
   display: inline-block;
@@ -449,7 +449,7 @@
   padding: 40px 0;
   text-align: center;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--text-micro);
   margin: auto;
   width: 100%;
 }
@@ -493,8 +493,8 @@
 }
 
 .recInfo h5 {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
@@ -502,7 +502,7 @@
 }
 
 .recInfo span {
-  font-size: 9px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -510,7 +510,7 @@
 }
 
 .recGenre {
-  font-size: 8px !important;
+  font-size: var(--text-micro) !important;
   color: var(--accent-secondary) !important;
   margin-top: 1px;
 }
@@ -524,8 +524,8 @@
   border-radius: 50%;
   background: var(--accent-primary);
   color: #fff;
-  font-size: 8px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
   display: flex;
   align-items: center;
   justify-content: center;

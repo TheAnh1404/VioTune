@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './PersonalPlaylist.module.css';
 import { Heart } from 'lucide-react';
 import { API_URL } from '../../config';
+import { authenticatedFetch } from '../../api';
 
 const getCoverImage = (trackId, genre) => {
   const images = [
@@ -37,7 +38,7 @@ const PlaylistCard = ({ song, onPlaySong, isLiked, onLikeSong }) => {
       <div className={styles.overlay}>
         <h4 className={styles.playlistName}>{song.track_name}</h4>
         <span className={styles.trackCount}>{song.artists}</span>
-        <span className={styles.trackCount} style={{ fontSize: '11px', color: '#7f9cf5', marginTop: '2px' }}>
+        <span className={styles.trackCount} style={{ fontSize: 'var(--text-micro)', color: '#7f9cf5', marginTop: '2px' }}>
           {song.track_genre}
         </span>
       </div>
@@ -53,7 +54,7 @@ const PersonalPlaylist = ({ userId = 42, onPlaySong, likedSongIds = new Set(), o
     const fetchCfRecs = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_URL}/recommend/cf?user_id=${userId}&top_n=6`);
+        const res = await authenticatedFetch(`${API_URL}/recommend/cf?user_id=${userId}&top_n=6`);
         const json = await res.json();
         if (json.status === "success") {
           setCfRecs(json.data);

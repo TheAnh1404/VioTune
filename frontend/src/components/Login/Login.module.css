@@ -7,7 +7,7 @@
     width: 100vw;
     position: relative;
     overflow: hidden;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-primary);
 }
 
 .bodyWrapper * {
@@ -54,9 +54,9 @@
 }
 
 .title {
-    font-size: 42px;
+    font-size: var(--text-display);
     margin-bottom: 25px;
-    font-weight: 700;
+    font-weight: var(--weight-bold);
     color: #f1f5f9;
 }
 
@@ -86,30 +86,30 @@
     border: none;
     outline: none;
     color: white;
-    font-size: 16px;
-    font-weight: 500;
+    font-size: var(--text-body);
+    font-weight: var(--weight-medium);
     margin-left: 14px;
     width: 100%;
 }
 
 .inputGroup input::placeholder {
     color: #94a3b8;
-    font-weight: 500;
+    font-weight: var(--weight-medium);
 }
 
 .authButton {
     background-color: #030514;
     color: #f1f5f9;
-    font-size: 16px;
+    font-size: var(--text-body);
     padding: 16px 50px;
     border-radius: 14px;
-    font-weight: 700;
+    font-weight: var(--weight-bold);
     text-transform: uppercase;
     margin-top: 25px;
     cursor: pointer;
     border: 1px solid rgba(255, 255, 255, 0.15);
     transition: transform 0.2s, background 0.2s, border-color 0.2s;
-    letter-spacing: 1px;
+    letter-spacing: var(--tracking-wide);
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     width: 100%;
 }
@@ -131,11 +131,11 @@
     padding: 14px 50px;
     border-radius: 14px;
     cursor: pointer;
-    font-size: 16px;
-    font-weight: 700;
+    font-size: var(--text-body);
+    font-weight: var(--weight-bold);
     margin-top: 30px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: var(--tracking-wide);
     transition: background 0.3s, color 0.3s;
 }
 
@@ -222,14 +222,14 @@
 }
 
 .togglePanel h1 {
-    font-size: 42px;
+    font-size: var(--text-display);
     margin-bottom: 20px;
-    font-weight: 700;
+    font-weight: var(--weight-bold);
 }
 
 .togglePanel p {
-    font-size: 16px;
-    line-height: 1.6;
+    font-size: var(--text-body);
+    line-height: var(--leading-normal);
     color: #cbd5e1;
 }
 
@@ -257,6 +257,6 @@
     border-color: rgba(255, 255, 255, 0.4);
 }
 
-.span { font-size: 14px; color: #94a3b8; margin-bottom: 5px; }
-.forgot { color: #cbd5e1; font-size: 14px; margin: 20px 0 10px 0; text-decoration: none; transition: color 0.2s; }
+.span { font-size: var(--text-sm); color: #94a3b8; margin-bottom: 5px; }
+.forgot { color: #cbd5e1; font-size: var(--text-sm); margin: 20px 0 10px 0; text-decoration: none; transition: color 0.2s; }
 .forgot:hover { color: #fff; text-decoration: underline; }

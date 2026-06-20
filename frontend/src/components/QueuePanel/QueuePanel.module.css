@@ -22,11 +22,11 @@
 }
 
 .header h2 {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--text-heading-sm);
+  font-weight: var(--weight-bold);
   margin: 0;
   color: #fff;
-  letter-spacing: -0.5px;
+  letter-spacing: var(--tracking-tight);
 }
 
 .headerActions {
@@ -84,15 +84,15 @@
   display: flex;
   align-items: center;
   color: #cbd5e1;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
 }
 
 .nowPlayingIndicator {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 
 .trackListWrapper {
@@ -145,7 +145,7 @@
 }
 
 .indexNumber {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: #64748b;
   width: 20px;
   display: flex;
@@ -162,15 +162,15 @@
 }
 
 .trackTitle {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .trackArtist {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: #94a3b8;
   white-space: nowrap;
   overflow: hidden;
@@ -185,11 +185,11 @@
 .emptyState {
   color: #64748b;
   padding: 60px 10px;
-  font-size: 13px;
+  font-size: var(--text-label);
   text-align: center;
   border: 1px dashed rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  line-height: 1.6;
+  line-height: var(--leading-normal);
 }
 
 /* Micro bar animation for active track */

@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './Header.module.css';
-import { Search, Bell, Settings, X, LogOut } from 'lucide-react';
+import { Search, X, LogOut } from 'lucide-react';
 import logo from '../../assets/logo.png';
 
 const Header = ({ searchQuery, onSearchChange, username = "Guest", onLogOut, showSearch = false }) => {
@@ -37,7 +37,7 @@ const Header = ({ searchQuery, onSearchChange, username = "Guest", onLogOut, sho
 
       <div className={styles.rightSection}>
         {/* Authenticated user badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#cbd5e1', fontSize: '14px', fontWeight: '500' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#cbd5e1', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)' }}>
           <span style={{
             background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.15))',
             padding: '6px 14px',
@@ -60,8 +60,8 @@ const Header = ({ searchQuery, onSearchChange, username = "Guest", onLogOut, sho
               display: 'flex', 
               alignItems: 'center', 
               gap: '6px', 
-              fontSize: '13px', 
-              fontWeight: '600', 
+              fontSize: 'var(--text-label)',
+              fontWeight: 'var(--weight-semibold)',
               padding: '6px 12px', 
               borderRadius: '8px', 
               background: 'rgba(248,113,113,0.08)', 

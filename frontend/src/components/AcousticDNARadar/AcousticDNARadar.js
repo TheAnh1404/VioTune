@@ -30,7 +30,7 @@ const AcousticDNARadar = ({ data }) => {
           <PolarGrid stroke="rgba(255, 255, 255, 0.1)" />
           <PolarAngleAxis 
             dataKey="subject" 
-            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+            tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'var(--font-primary)' }}
           />
           <PolarRadiusAxis 
             angle={30} 

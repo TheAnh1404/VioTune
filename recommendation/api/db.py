@@ -3,7 +3,8 @@ import os
 
 # Configurable database path pointing to the centralized viotune.db file
 CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(CURRENT_DIR, "data/viotune.db")
+DEFAULT_DB_PATH = os.path.join(CURRENT_DIR, "data/viotune.db")
+DB_PATH = os.path.abspath(os.getenv("VIOTUNE_DB_PATH", DEFAULT_DB_PATH))
 
 def get_db_connection():
     """

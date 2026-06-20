@@ -86,9 +86,9 @@
 
 .title {
   font-family: var(--font-display);
-  font-size: 36px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
+  font-size: var(--text-heading-2xl);
+  font-weight: var(--weight-extrabold);
+  letter-spacing: var(--tracking-tight);
   background: linear-gradient(135deg, #f8fafc 30%, #94a3b8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -96,7 +96,7 @@
 
 .subtitle {
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: var(--text-body-sm);
 }
 
 /* Glowing central search input */
@@ -122,7 +122,7 @@
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: var(--text-body);
   outline: none;
   backdrop-filter: blur(8px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -148,8 +148,8 @@
 
 .sectionTitle {
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--text-heading-sm);
+  font-weight: var(--weight-bold);
   margin-bottom: 20px;
   color: var(--text-primary);
 }
@@ -236,8 +236,8 @@
 }
 
 .songTitle {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
   margin-bottom: 4px;
   white-space: nowrap;
@@ -246,7 +246,7 @@
 }
 
 .songArtist {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -256,8 +256,8 @@
 
 .genreBadge {
   align-self: flex-start;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
   color: var(--accent-secondary);
   background: rgba(6, 182, 212, 0.08);
   border: 1px solid rgba(6, 182, 212, 0.15);
@@ -360,13 +360,13 @@
 
 .searchPlaceholder h3, .noResults h3 {
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--text-heading-sm);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
 }
 
 .searchPlaceholder p, .noResults p {
-  font-size: 14px;
+  font-size: var(--text-sm);
   max-width: 400px;
 }
 
@@ -375,7 +375,7 @@
     margin-top: 20px;
   }
   .title {
-    font-size: 28px;
+    font-size: var(--text-heading-lg);
   }
   .mainContent {
     padding: 16px;

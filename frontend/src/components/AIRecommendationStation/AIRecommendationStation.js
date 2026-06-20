@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './AIRecommendationStation.module.css';
 import { Sliders, Activity, Cpu, Search, Music, Layers, Sparkles, RefreshCw, Heart } from 'lucide-react';
 import { API_URL } from '../../config';
+import { authenticatedFetch } from '../../api';
 
 const getCoverImage = (trackId) => {
   const images = [
@@ -21,7 +22,7 @@ const getCoverImage = (trackId) => {
   return images[index];
 };
 
-const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds, onLikeSong, likedTrigger }) => {
+const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds, onLikeSong, likedTrigger, isAdmin = false }) => {
   const [alpha, setAlpha] = useState(0.5);
   const [seedSong, setSeedSong] = useState(null);
   const [recs, setRecs] = useState([]);
@@ -58,13 +59,13 @@ const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds
       };
       fetchDefaultSeed();
     }
-  }, [currentSong]); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSong, seedSong]);
 
   // 2. Fetch User Taste Profile when likedTrigger changes
   useEffect(() => {
     const fetchTasteProfile = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/users/${userId}/taste-profile`);
+        const res = await authenticatedFetch(`${API_URL}/api/users/${userId}/taste-profile`);
         const json = await res.json();
         if (json.status === "success") {
           setTaste(json.data);
@@ -105,7 +106,7 @@ const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds
       if (!userId || !seedSong) return;
       setLoadingRecs(true);
       try {
-        const res = await fetch(`${API_URL}/recommend?user_id=${userId}&song_id=${seedSong.track_id}&alpha=${alpha}&top_n=6`);
+        const res = await authenticatedFetch(`${API_URL}/recommend?user_id=${userId}&song_id=${seedSong.track_id}&alpha=${alpha}&top_n=6`);
         const json = await res.json();
         if (json.status === "success") {
           // Convert from hybrid output {track_name, artists, track_genre} 
@@ -141,7 +142,7 @@ const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds
     setRetrainLoading(true);
     setRetrainStatus("Initiating SVD Stochastic Gradient Descent (SGD)...");
     try {
-      const res = await fetch(`${API_URL}/recommend/retrain`, { method: 'POST' });
+      const res = await authenticatedFetch(`${API_URL}/recommend/retrain`, { method: 'POST' });
       const json = await res.json();
       if (json.status === "success") {
         setRetrainStatus("SVD retrained in background. Real-time fold-in updated.");
@@ -250,7 +251,7 @@ const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds
           )}
 
           {/* Model Health / Retrain Widget */}
-          <div className={styles.retrainBox}>
+          {isAdmin && <div className={styles.retrainBox}>
             <div className={styles.retrainHeader}>
               <Cpu size={16} color="#8b5cf6" />
               <span>SVD Latent Factors: 50 Dimensions</span>
@@ -261,7 +262,7 @@ const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds
               {retrainLoading ? "SGD Matrix Training..." : "Retrain SVD Latent Model"}
             </button>
             {retrainStatus && <div className={styles.retrainStatus}>{retrainStatus}</div>}
-          </div>
+          </div>}
         </div>
 
         {/* Right Column: Dynamic Tuning & Recs */}

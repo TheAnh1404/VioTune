@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Music, User, Heart, Trash2 } from 'lucide-react';
 import styles from './PlaylistPanel.module.css';
 import { API_URL } from '../../config';
+import { authenticatedFetch } from '../../api';
 
 const getCoverImage = (trackId, genre) => {
   const images = [
@@ -28,7 +29,7 @@ const PlaylistPanel = ({ userId = 42, onPlaySong, currentSong, isPlaying, refres
   const fetchLikedSongs = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/songs/liked?user_id=${userId}`);
+      const res = await authenticatedFetch(`${API_URL}/songs/liked?user_id=${userId}`);
       const json = await res.json();
       if (json.status === "success") {
         setLikedSongs(json.data);
@@ -48,7 +49,7 @@ const PlaylistPanel = ({ userId = 42, onPlaySong, currentSong, isPlaying, refres
   const handleUnlike = async (e, trackId) => {
     e.stopPropagation(); // Avoid playing the song
     try {
-      const res = await fetch(`${API_URL}/songs/${trackId}/like?user_id=${userId}`, {
+      const res = await authenticatedFetch(`${API_URL}/songs/${trackId}/like?user_id=${userId}`, {
         method: 'DELETE'
       });
       const json = await res.json();
@@ -89,9 +90,9 @@ const PlaylistPanel = ({ userId = 42, onPlaySong, currentSong, isPlaying, refres
       <div className={styles.trackListWrapper}>
         <div className={styles.trackList}>
           {loading ? (
-            <p style={{ color: '#a0aec0', padding: '20px', fontSize: '14px', textAlign: 'center' }}>Loading favorites...</p>
+            <p style={{ color: '#a0aec0', padding: '20px', fontSize: 'var(--text-sm)', textAlign: 'center' }}>Loading favorites...</p>
           ) : likedSongs.length === 0 ? (
-            <div style={{ color: '#64748b', padding: '40px 10px', fontSize: '13px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px' }}>
+            <div style={{ color: '#64748b', padding: '40px 10px', fontSize: 'var(--text-label)', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px' }}>
               No favorite songs yet.<br />Click the Heart icon on any song to add it!
             </div>
           ) : (
@@ -108,15 +109,15 @@ const PlaylistPanel = ({ userId = 42, onPlaySong, currentSong, isPlaying, refres
                   <img src={cover} alt="Track" className={styles.trackThumb} />
                   <div style={{ flex: 1, minWidth: 0, paddingRight: '10px' }}>
                     <div style={{ 
-                      fontSize: '14px', 
-                      fontWeight: '600', 
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
                       color: isCurrent ? '#1db954' : '#fff',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
                     }}>{track.track_name}</div>
                     <div style={{ 
-                      fontSize: '12px', 
+                      fontSize: 'var(--text-caption)',
                       color: '#a0aec0',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',

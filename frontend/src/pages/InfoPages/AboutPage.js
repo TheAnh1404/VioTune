@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Info, Music, ShieldCheck, Zap } from 'lucide-react';
+import { Music, ShieldCheck, Zap } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePlayback } from '../../context/PlaybackContext';
 import styles from './InfoPages.module.css';

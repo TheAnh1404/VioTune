@@ -97,8 +97,8 @@
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -111,9 +111,9 @@
 
 .title {
   font-family: var(--font-display);
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
+  font-size: var(--text-heading-xl);
+  font-weight: var(--weight-extrabold);
+  letter-spacing: var(--tracking-tight);
   background: linear-gradient(135deg, #f8fafc 30%, #a5b4fc 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -121,7 +121,7 @@
 
 .subtitle {
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: var(--text-body-sm);
 }
 
 /* Interactive Forms / Inputs */
@@ -150,14 +150,14 @@
 
 .cardTitle {
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
 }
 
 .cardDesc {
   color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--text-label);
+  line-height: var(--leading-normal);
 }
 
 .inputFieldWrapper {
@@ -174,7 +174,7 @@
   color: var(--text-primary);
   padding: 12px 16px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: var(--text-sm);
   outline: none;
   transition: all 0.2s;
 }
@@ -203,7 +203,7 @@
   padding: 10px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-label);
   transition: background 0.2s;
 }
 
@@ -215,8 +215,8 @@
   margin-top: 12px;
   padding: 8px 12px;
   border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -235,8 +235,8 @@
   padding: 14px 36px;
   border: none;
   border-radius: 30px;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-bold);
   cursor: pointer;
   box-shadow: var(--neon-glow-primary);
   display: flex;
@@ -264,7 +264,7 @@
   max-width: 600px;
   margin: 0 auto;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 
 /* Algorithmic Columns Grid */
@@ -297,15 +297,15 @@
 
 .colHeader h4 {
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
 }
 
 .algoDesc {
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--text-caption);
+  line-height: var(--leading-normal);
   min-height: 48px;
 }
 
@@ -319,7 +319,7 @@
   color: var(--text-muted);
   text-align: center;
   padding: 40px 0;
-  font-size: 13px;
+  font-size: var(--text-label);
   border: 1px dashed var(--glass-border);
   border-radius: 12px;
 }
@@ -352,8 +352,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
   color: var(--text-secondary);
 }
 
@@ -365,8 +365,8 @@
 }
 
 .songName {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -374,7 +374,7 @@
 }
 
 .songArtist {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -382,8 +382,8 @@
 }
 
 .genreBadge {
-  font-size: 9px;
-  font-weight: 600;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
   padding: 2px 8px;
   border-radius: 10px;
 }
@@ -408,6 +408,6 @@
     padding: 16px;
   }
   .title {
-    font-size: 24px;
+    font-size: var(--text-heading-md);
   }
 }

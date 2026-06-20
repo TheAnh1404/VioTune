@@ -1,7 +1,7 @@
 .sectionContainer {
     padding: 20px 0;
     color: white;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-primary);
 }
 
 .header {
@@ -12,18 +12,18 @@
 }
 
 .title {
-    font-size: 24px;
-    font-weight: 700;
+    font-size: var(--text-heading-md);
+    font-weight: var(--weight-bold);
     color: #fff;
-    letter-spacing: -0.5px;
+    letter-spacing: var(--tracking-tight);
     margin: 0;
 }
 
 .seeAll {
     color: #94a3b8;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
     transition: all 0.3s ease;
     padding-bottom: 3px;
 }
@@ -106,15 +106,15 @@
 }
 
 .playlistName {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
     margin: 0;
     color: #fff;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .trackCount {
-    font-size: 13px;
+    font-size: var(--text-label);
     color: #cbd5e1;
     margin-top: 4px;
 }

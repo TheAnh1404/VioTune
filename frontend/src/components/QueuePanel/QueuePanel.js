@@ -57,7 +57,7 @@ const QueuePanel = ({ queue = [], currentIndex = -1, currentSong, onPlaySong, on
           {currentSong && (
             <div className={styles.nowPlayingIndicator}>
               <Volume2 size={16} style={{ color: '#1db954' }} />
-              <span style={{ color: '#1db954', fontWeight: '600' }}>Now Playing</span>
+              <span style={{ color: '#1db954', fontWeight: 'var(--weight-semibold)' }}>Now Playing</span>
             </div>
           )}
         </div>

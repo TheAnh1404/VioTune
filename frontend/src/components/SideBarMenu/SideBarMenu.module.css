@@ -124,8 +124,14 @@
 
 /* Labels */
 .label {
+<<<<<<< HEAD
   font-size: 14px;
   font-weight: 600;
+=======
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  margin-left: 14px;
+>>>>>>> da03e441cadda11dede5ab28e6f67d1f934dd755
   white-space: nowrap;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -183,11 +189,11 @@
 }
 
 .sectionTitle {
-  font-size: 11px;
+  font-size: var(--text-micro);
   text-transform: uppercase;
   color: #64748b;
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
   margin: 0 4px;
 }
 
@@ -219,8 +225,8 @@
 }
 
 .trackName {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
@@ -228,7 +234,7 @@
 }
 
 .trackArtist {
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: #7b8baa;
   white-space: nowrap;
   overflow: hidden;
@@ -271,8 +277,8 @@
   right: -4px;
   background-color: #ef4444;
   color: white;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-bold);
   border-radius: 10px;
   padding: 2px 6px;
   border: 2px solid #0b0f24;
