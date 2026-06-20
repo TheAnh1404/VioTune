@@ -76,49 +76,48 @@ export const PlaybackProvider = ({ children }) => {
     }
   };
 
-  // Sync Audio Playback (race-safe: stale previews are discarded via `active` flag)
+  // Sync Audio Playback: Fetch Preview URL when song changes
   useEffect(() => {
     let active = true;
-    if (!audioRef.current) return;
-
     if (currentSong && currentSong.track_id) {
-      const applyPlayback = async () => {
-        const deezerUrl = await fetchDeezerPreview(currentSong);
-        if (!active) return; // Song changed while we were fetching — discard
-
-        setPreviewUrl(deezerUrl);
-
-        if (!deezerUrl) {
+      setPreviewUrl(null); // Reset URL before fetching new one
+      fetchDeezerPreview(currentSong).then(url => {
+        if (!active) return;
+        setPreviewUrl(url);
+        if (!url) {
           console.warn(`No Deezer preview found for: ${currentSong.track_name}`);
-          audioRef.current.pause();
-          return;
+          setIsPlaying(false);
         }
+      });
+    } else {
+      setPreviewUrl(null);
+    }
+    return () => { active = false; };
+  }, [currentSong]);
 
-        if (audioRef.current.src !== deezerUrl) {
-          audioRef.current.src = deezerUrl;
-          audioRef.current.load();
-        }
+  // Handle Play/Pause and Volume separately and synchronously
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.volume = volume;
 
-        audioRef.current.volume = volume;
-
-        if (isPlaying) {
-          audioRef.current.play().catch(err => {
-            console.warn('Playback blocked:', err);
-          });
-        } else {
-          audioRef.current.pause();
-        }
-      };
-
-      applyPlayback();
+    if (isPlaying && previewUrl) {
+      // Ensure src is set before playing
+      if (audioRef.current.src !== previewUrl) {
+        audioRef.current.src = previewUrl;
+        audioRef.current.load();
+      }
+      
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.warn('Playback blocked by browser autoplay policy:', err);
+          setIsPlaying(false); // Reset to paused if blocked
+        });
+      }
     } else {
       audioRef.current.pause();
     }
-
-    return () => {
-      active = false; // Cleanup: invalidate this effect's async work
-    };
-  }, [currentSong, isPlaying, volume]);
+  }, [isPlaying, previewUrl, volume]);
 
   // Sync Volume
   useEffect(() => {
@@ -281,6 +280,7 @@ export const PlaybackProvider = ({ children }) => {
       {children}
       <audio 
         ref={audioRef}
+        crossOrigin="anonymous"
         onDurationChange={(e) => setDuration(e.target.duration)}
         onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
         onEnded={handleAudioEnded}

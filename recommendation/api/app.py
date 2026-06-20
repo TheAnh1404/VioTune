@@ -11,7 +11,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from api.database_init import init_db
 from api.data_state import load_songs_df, sync_likes_from_db
-from api.routers import users, songs, interactions, recommendations, playlists
 
 app = FastAPI(title="VioTune API", description="Modular Music Recommendation API", version="1.1.0")
 
@@ -24,6 +23,9 @@ except Exception as e:
     print(f"Startup error: {e}")
     app.state.songs_df = None
     app.state.user_likes = {}
+
+# Now import routers, which might load ML models that rely on the DB
+from api.routers import users, songs, interactions, recommendations, playlists
 
 # 2. CORS setup
 allowed_origins = [
