@@ -281,6 +281,7 @@ export const PlaybackProvider = ({ children }) => {
       {children}
       <audio 
         ref={audioRef}
+        crossOrigin="anonymous"
         onDurationChange={(e) => setDuration(e.target.duration)}
         onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
         onEnded={handleAudioEnded}
