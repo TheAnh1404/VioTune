@@ -50,9 +50,9 @@ Hệ thống gợi ý (Recommendation Systems) đóng vai trò như **"xương s
 **Câu hỏi nghiên cứu:** Làm thế nào để dự đoán chính xác sở thích của người dùng khi dữ liệu tương tác (interaction data) cực kỳ thưa thớt?
 
 Trong dữ liệu thực tế của VioTune:
-- **200 người dùng** × **114.000 bài hát** = **~17.948.200 ô ma trận** tiềm năng
-- Chỉ có **9.266 lượt tương tác** thực tế
-- **Tỷ lệ thưa (Sparsity): 99,95%** — nghĩa là hệ thống chỉ biết được 0,05% sở thích, phải **suy luận** 99,95% còn lại
+- **1.000 người dùng** × **114.000 bài hát** = **~89.740.000 ô ma trận** tiềm năng
+- Chỉ có **35.892 lượt tương tác** thực tế
+- **Tỷ lệ thưa (Sparsity): 99,96%** — nghĩa là hệ thống chỉ biết được 0,04% sở thích, phải **suy luận** 99,96% còn lại
 
 ### 2.2 Mô Hình Hóa Bài Toán: Ma Trận User-Item
 
@@ -72,8 +72,8 @@ User m          ?            rₘ₂          ?            ...    ?
 ### 2.3 Mô Hình Hóa Toán Học
 
 Gọi **R** là ma trận kích thước **m × n** với:
-- **m** = số lượng người dùng (m = 200 trong VioTune)
-- **n** = số lượng bài hát (n = 8.692 bài đã có tương tác, tổng 114.000 trong kho)
+- **m** = số lượng người dùng (m = 1.000 trong VioTune)
+- **n** = số lượng bài hát (n = 8.638 bài đã có tương tác, tổng 114.000 trong kho)
 - Mỗi phần tử **r_ui** biểu diễn điểm phản hồi (feedback score) của user `u` đối với item `i`
 
 **Phương pháp tính điểm phản hồi:** VioTune sử dụng **Implicit Feedback** — dữ liệu hành vi nghe nhạc (`play_count`) thay vì đánh giá sao rõ ràng. Điểm phản hồi được chuẩn hóa bằng **Log Normalization**:
@@ -124,10 +124,10 @@ Trong đó:
 | Ký hiệu | Ý nghĩa | Giá trị trong VioTune |
 |---|---|---|
 | **μ** | Trung bình toàn cục của tất cả rating | Tính từ tập train |
-| **b_u** | Bias riêng của user u (thích nghe nhiều hay ít) | Vector (200,) |
-| **b_i** | Bias riêng của item i (bài hát phổ biến hay không) | Vector (8692,) |
-| **Q[i]** | Vector biểu diễn ẩn của bài hát i | Ma trận (8692 × 50) ≈ 3.4 MB |
-| **P[u]** | Vector biểu diễn ẩn của user u | Ma trận (200 × 50) ≈ 78 KB |
+| **b_u** | Bias riêng của user u (thích nghe nhiều hay ít) | Vector (1000,) |
+| **b_i** | Bias riêng của item i (bài hát phổ biến hay không) | Vector (8638,) |
+| **Q[i]** | Vector biểu diễn ẩn của bài hát i | Ma trận (8638 × 50) ≈ 3.4 MB |
+| **P[u]** | Vector biểu diễn ẩn của user u | Ma trận (1000 × 50) ≈ 391 KB |
 
 **Hàm mất mát (Regularized MSE Loss):**
 
@@ -221,7 +221,7 @@ Trong đó:
 | Nguồn dữ liệu | Mô tả | Quy mô |
 |---|---|---|
 | **Spotify Tracks Dataset (Kaggle)** | Bộ dữ liệu công khai chứa metadata và đặc trưng audio | 114.000 bản nhạc, 21 thuộc tính |
-| **Synthetic Interactions** | Dữ liệu tương tác giả lập bằng thuật toán mô phỏng hành vi | 200 users, 9.266 lượt tương tác |
+| **Synthetic Interactions** | Dữ liệu tương tác giả lập bằng thuật toán mô phỏng hành vi phân cụm (5 nhóm sở thích) | 1.000 users, 35.892 lượt tương tác |
 | **Firestore Real-time Data** | Lịch sử nghe thực (play_history) và bài hát yêu thích (liked_songs) | Thu thập liên tục từ người dùng thực |
 | **Deezer API** | Nhạc preview 30 giây và ảnh bìa album | Gọi API và cache trong SQLite |
 
@@ -258,7 +258,7 @@ Trong đó:
 │                    APPLICATION LAYER                             │
 │              FastAPI + Uvicorn (Async Python)                   │
 │    ┌──────────────────────────────────────────────────────┐     │
-│    │ api/app.py — 1166 dòng, 30+ API Endpoints            │     │
+│    │ api/app.py + routers/ — 528 dòng, 30+ API Endpoints │     │
 │    │  • /recommend (Hybrid)    • /recommend/content (CB)  │     │
 │    │  • /recommend/cf (CF)     • /recommend/retrain       │     │
 │    │  • /songs/search          • /songs/preview (Deezer)  │     │
@@ -272,8 +272,8 @@ Trong đó:
 │    ┌─────────────────┐ ┌─────────────────┐ ┌──────────────┐    │
 │    │ SVD Model (CF)  │ │ KNN Model (CB)  │ │ Hybrid Engine│    │
 │    │ collaborative.py│ │ content_based.py│ │  hybrid.py   │    │
-│    │ P(200×50)=78KB  │ │ 7 features,     │ │ RRS Scoring  │    │
-│    │ Q(8692×50)=3.4MB│ │ Cosine Distance │ │ α = 0.5      │    │
+│    │ P(1000×50)=391KB│ │ 7 features,     │ │ RRS Scoring  │    │
+│    │ Q(8638×50)=3.4MB│ │ Cosine Distance │ │ α = 0.5      │    │
 │    └─────────────────┘ └─────────────────┘ └──────────────┘    │
 ├─────────────────────────────────────────────────────────────────┤
 │                    DATA LAYER                                    │
@@ -392,6 +392,7 @@ VioTune áp dụng hai phương pháp đánh giá bổ trợ nhau để kiểm c
    Sử dụng phương pháp chia dữ liệu tương tác (`interactions.csv`) theo tỷ lệ 80/20:
    - **Training Set (80%):** 28.713 lượt tương tác để học các vector ẩn $P_u$, $Q_i$, và bias $b_u, b_i$.
    - **Testing Set (20%):** 7.179 lượt tương tác để đánh giá độ lệch RMSE của mô hình dự đoán.
+   - *Lưu ý:* Con số 28.713/7.179 là kết quả chia trên toàn bộ 35.892 interactions sau khi sklearn `train_test_split` được áp dụng.
 
 2. **Đánh giá chất lượng gợi ý Top-K (Leave-3-Out Protocol):**
    Để so sánh trực tiếp 3 mô hình (CB, CF, Hybrid) trên một tập dữ liệu thử nghiệm mô phỏng phân cụm thực tế:
@@ -481,10 +482,10 @@ Dưới đây là kết quả đánh giá chi tiết của 3 mô hình chạy th
 
 | Tệp mô hình | Kích thước | Nội dung |
 |---|---|---|
-| P.npy | 390.7 KB | Ma trận User latent (1000 × 50) |
+| P.npy | 390.8 KB | Ma trận User latent (1000 × 50) |
 | Q.npy | 3,374.3 KB (3.3 MB) | Ma trận Item latent (8638 × 50) |
 | b_u.npy | 7.9 KB | Bias vector user (1000,) |
-| b_i.npy | 67.5 KB | Bias vector item (8638,) |
+| b_i.npy | 67.6 KB | Bias vector item (8638,) |
 | mu.npy | 0.1 KB | Trung bình toàn cục μ |
 | **Tổng** | **~3.8 MB** | Toàn bộ mô hình SVD |
 
@@ -508,7 +509,7 @@ return popular_songs[["track_id", "track_name", "artists", "track_genre", "popul
 
 #### 6.1.2 Dữ Liệu Tương Tác Giả Lập
 
-Bộ dữ liệu tương tác hiện tại (200 users, 9.266 interactions) được **sinh tổng hợp (synthetic)** bằng thuật toán mô phỏng hành vi, chưa phải dữ liệu từ người dùng thực tế ở quy mô lớn.
+Bộ dữ liệu tương tác hiện tại (1.000 users phân 5 cụm, 35.892 interactions) được **sinh tổng hợp (synthetic)** bằng thuật toán mô phỏng hành vi phân cụm sở thích, chưa phải dữ liệu từ người dùng thực tế ở quy mô lớn.
 
 #### 6.1.3 Preview Nhạc Giới Hạn
 
@@ -686,18 +687,28 @@ VioTune/
 │
 ├── recommendation/                    # Python ML Service
 │   ├── api/
-│   │   ├── app.py                     # FastAPI Server (1166 lines, 30+ endpoints)
+│   │   ├── app.py                     # FastAPI Server Entry Point
+│   │   ├── routers/                   # Modular API Routers
+│   │   │   ├── recommendations.py     # /recommend endpoints
+│   │   │   ├── songs.py               # /songs endpoints
+│   │   │   ├── interactions.py        # /interactions endpoints
+│   │   │   ├── playlists.py           # /playlists endpoints
+│   │   │   └── users.py               # /users endpoints
 │   │   ├── db.py                      # SQLite Connection Manager (WAL mode)
 │   │   └── firebase_db.py            # Firestore REST CRUD Operations
+│   ├── docs/
+│   │   └── alpha_tuning_report.md     # Optimization Report
 │   ├── src/
-│   │   ├── collaborative.py          # SVD Matrix Factorization (412 lines)
-│   │   ├── content_based.py          # KNN + Cosine Similarity (150 lines)
+│   │   ├── collaborative.py          # SVD Matrix Factorization (424 lines)
+│   │   ├── content_based.py          # KNN + Cosine Similarity (170 lines)
 │   │   ├── hybrid.py                 # Hybrid RRS Engine (80 lines)
+│   │   ├── evaluate.py               # Evaluation Suite (562 lines)
+│   │   ├── tune_alpha.py             # Alpha Hyperparameter Sweep (126 lines)
 │   │   ├── train.py                  # Model Training Script
 │   │   └── migrate_db.py            # CSV → SQLite Migration
 │   ├── data/
 │   │   ├── dataset.csv                # 114,000 tracks (~20 MB)
-│   │   ├── interactions.csv           # 9,266 user interactions (~282 KB)
+│   │   ├── interactions.csv           # 35,892 user interactions (~1.1 MB)
 │   │   └── viotune.db                # SQLite Database (~28.2 MB)
 │   ├── models/
 │   │   ├── P.npy, Q.npy              # SVD Latent Matrices
@@ -735,16 +746,16 @@ npm start
 | Tổng số thể loại | 114 |
 | Tổng số nghệ sĩ | 31.437 |
 | Số đặc trưng audio | 7 (danceability, energy, acousticness, instrumentalness, liveness, valence, tempo) |
-| Số người dùng (dataset) | 200 |
-| Số tương tác | 9.266 |
-| Tỷ lệ thưa ma trận | 99.95% |
+| Số người dùng (dataset) | 1.000 (5 cụm sở thích) |
+| Số tương tác | 35.892 |
+| Tỷ lệ thưa ma trận | 99.96% |
 | Số chiều ẩn SVD (k) | 50 |
-| Kích thước mô hình | ~3.5 MB |
+| Kích thước mô hình | ~3.8 MB |
 | Kích thước CSDL SQLite | ~28.2 MB |
 | Số API endpoints | 30+ |
 | Số React components | 26+ |
-| Dòng code Backend (app.py) | 1.166 |
-| Dòng code CF (collaborative.py) | 412 |
+| Dòng code Backend (API tổng) | 528 (app.py + routers) |
+| Dòng code CF (collaborative.py) | 424 |
 
 ---
 
