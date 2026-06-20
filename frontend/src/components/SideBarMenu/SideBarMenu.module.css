@@ -124,9 +124,14 @@
 
 /* Labels */
 .label {
+<<<<<<< HEAD
+  font-size: 14px;
+  font-weight: 600;
+=======
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   margin-left: 14px;
+>>>>>>> da03e441cadda11dede5ab28e6f67d1f934dd755
   white-space: nowrap;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -134,11 +139,13 @@
 .labelCollapsed {
   opacity: 0;
   width: 0;
+  margin-left: 0;
   transform: translateX(-10px);
 }
 
 .labelExpanded {
   opacity: 1;
+  margin-left: 14px;
   transform: translateX(0);
 }
 
