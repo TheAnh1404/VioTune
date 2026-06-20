@@ -166,18 +166,23 @@ class SVDModel:
         """
         BƯỚC 6: DỰ ĐOÁN ĐIỂM CHO TẤT CẢ BÀI CHƯA NGHE,
         trả về danh sách (item_idx, score) đã sắp xếp giảm dần.
+        Vectorized numpy implementation.
         """
-        listened_set = set(listened_item_indices)
-
-        scores = []
-        for i in range(self.Q.shape[0]):
-            if i not in listened_set:
-                score = self._predict(u_idx, i)
-                scores.append((i, score))
-
-        # Sắp xếp theo điểm dự đoán từ cao đến thấp
-        scores.sort(key=lambda x: x[1], reverse=True)
-        return scores
+        scores = self.mu + self.b_u[u_idx] + self.b_i + self.Q.dot(self.P[u_idx])
+        if listened_item_indices:
+            # Chuyển listened_item_indices thành list số nguyên để NumPy indexing hợp lệ
+            idx_list = [int(x) for x in listened_item_indices if int(x) < len(scores)]
+            if idx_list:
+                scores[idx_list] = -np.inf
+                
+        sorted_indices = np.argsort(scores)[::-1]
+        results = []
+        for idx in sorted_indices:
+            score = scores[idx]
+            if score == -np.inf:
+                break
+            results.append((idx, score))
+        return results
 
     def compute_user_latent_vector(self, user_ratings, n_iterations=30):
         """
@@ -203,15 +208,22 @@ class SVDModel:
         """
         Dự đoán điểm số cho toàn bộ bài hát chưa nghe dựa trên vector latent p_u và bias b_u
         được chiếu (projected) thời gian thực của người dùng.
+        Vectorized numpy implementation.
         """
-        listened_set = set(listened_item_indices)
-        scores = []
-        for i in range(self.Q.shape[0]):
-            if i not in listened_set:
-                score = self.mu + b_u + self.b_i[i] + self.Q[i].dot(p_u)
-                scores.append((i, score))
-        scores.sort(key=lambda x: x[1], reverse=True)
-        return scores
+        scores = self.mu + b_u + self.b_i + self.Q.dot(p_u)
+        if listened_item_indices:
+            idx_list = [int(x) for x in listened_item_indices if int(x) < len(scores)]
+            if idx_list:
+                scores[idx_list] = -np.inf
+                
+        sorted_indices = np.argsort(scores)[::-1]
+        results = []
+        for idx in sorted_indices:
+            score = scores[idx]
+            if score == -np.inf:
+                break
+            results.append((idx, score))
+        return results
 
     def save(self, save_dir):
         """Lưu ma trận P, Q và bias vào thư mục models/."""

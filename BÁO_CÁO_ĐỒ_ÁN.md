@@ -532,7 +532,7 @@ Hệ thống phụ thuộc Deezer API cho bản preview 30 giây — không ph�
 2. **Phân tích audio thực (Audio Signal Processing):** Sử dụng Mel-Spectrogram + CNN để trích xuất đặc trưng trực tiếp từ file nhạc
 3. **Context-Aware Recommendation:** Gợi ý dựa trên ngữ cảnh (thời gian trong ngày, mood, hoạt động)
 4. **Mở rộng quy mô:** Triển khai lên cloud (Docker + Kubernetes), sử dụng Redis cho caching, PostgreSQL cho production database
-5. **A/B Testing:** Thiết kế thử nghiệm A/B để so sánh hiệu quả giữa các giá trị α khác nhau
+5. **Thử nghiệm A/B và tối ưu hóa siêu tham số lai α:** Nghiên cứu và tối ưu hóa hệ số lai α của mô hình Hybrid bằng cả phương pháp Offline Parameter Sweep và thiết kế quy trình thử nghiệm Online A/B Testing (Xem chi tiết tại phần 8).
 
 ---
 
@@ -562,6 +562,92 @@ Qua dự án VioTune, nhóm đã tích lũy kinh nghiệm thực chiến về:
 | **Machine Learning Lifecycle** | Từ thu thập dữ liệu → tiền xử lý → huấn luyện → đánh giá → triển khai → cập nhật |
 | **Database Design** | Dual-storage architecture (SQLite local + Firestore cloud) |
 | **Performance Optimization** | Caching (Deezer cache, in-memory likes), WAL mode, indexed queries |
+
+---
+
+## 8. ĐÁNH GIÁ TỐI ƯU HÓA ALPHA (OFFLINE) VÀ THIẾT KẾ THỬ NGHIỆM A/B (ONLINE)
+
+### 8.1 Thử Nghiệm Tối Ưu Hóa Siêu Tham Số Alpha (Offline Parameter Sweep)
+
+Để tìm ra sự cân bằng hoàn hảo giữa độ chính xác gợi ý và độ phủ của danh mục bài hát, chúng tôi đã tiến hành thử nghiệm quét tham số (Parameter Grid Sweep) trên giá trị hệ số lai $\alpha \in [0.0, 1.0]$. Thử nghiệm sử dụng giao thức **Leave-3-Out Protocol** trên bộ dữ liệu tương tác giả lập nâng cao gồm **1.000 users** (mỗi user có tối thiểu 5 tương tác, giữ lại 3 tương tác làm ground-truth để đánh giá).
+
+#### Bảng so sánh chi tiết hiệu năng theo giá trị Alpha (K = 5 và K = 10)
+
+##### K = 5
+| Giá trị Alpha | Precision@5 | Recall@5 | F1@5 | NDCG@5 | MAP@5 | Hit Rate@5 | Catalog Coverage |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **0.0 (Pure CF)** | 0.0128 | 0.0218 | 0.0161 | 0.0159 | 0.0085 | 0.0580 | 0.01% |
+| **0.1** | 0.0128 | 0.0218 | 0.0161 | 0.0159 | 0.0085 | 0.0580 | 0.28% |
+| **0.3** | 0.0132 | 0.0222 | 0.0165 | 0.0172 | 0.0092 | 0.0640 | 0.59% |
+| **0.5 (Hybrid Tối Ưu)** | **0.0140** | **0.0235** | **0.0175** | **0.0223** | **0.0135** | **0.0690** | **0.88%** |
+| **0.7** | 0.0116 | 0.0193 | 0.0145 | 0.0204 | 0.0129 | 0.0580 | 1.17% |
+| **0.9** | 0.0112 | 0.0187 | 0.0140 | 0.0201 | 0.0128 | 0.0560 | 1.43% |
+| **1.0 (Pure CB)** | 0.0112 | 0.0187 | 0.0140 | 0.0201 | 0.0128 | 0.0560 | 1.55% |
+
+##### K = 10
+| Giá trị Alpha | Precision@10 | Recall@10 | F1@10 | NDCG@10 | MAP@10 | Hit Rate@10 | Catalog Coverage |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **0.0 (Pure CF)** | 0.0107 | 0.0362 | 0.0165 | 0.0224 | 0.0106 | 0.0960 | 0.01% |
+| **0.1** | 0.0123 | 0.0415 | 0.0190 | 0.0247 | 0.0112 | 0.1110 | 0.28% |
+| **0.3** | **0.0128** | **0.0432** | **0.0197** | 0.0268 | 0.0125 | **0.1180** | 0.59% |
+| **0.5 (Hybrid Tối Ưu)** | 0.0117 | 0.0395 | 0.0180 | **0.0292** | **0.0156** | 0.1090 | **0.88%** |
+| **0.7** | 0.0081 | 0.0272 | 0.0125 | 0.0241 | 0.0141 | 0.0800 | 1.17% |
+| **0.9** | 0.0066 | 0.0220 | 0.0102 | 0.0215 | 0.0131 | 0.0660 | 1.43% |
+| **1.0 (Pure CB)** | 0.0062 | 0.0207 | 0.0095 | 0.0209 | 0.0130 | 0.0620 | 1.55% |
+
+#### Phân tích & Đề xuất giá trị $\alpha$ hợp lý nhất
+*   **Mô hình CF Thuần ($\alpha = 0.0$):** Có độ chính xác khá tốt nhưng gặp hiện tượng **filter bubbles** nặng nề, chỉ phủ được 0.01% catalog bài hát. Hệ thống lặp đi lặp lại những bài hát nổi tiếng, bỏ qua hoàn toàn các bài hát ngách.
+*   **Mô hình CB Thuần ($\alpha = 1.0$):** Đạt độ phủ cao nhất (1.55%) nhưng hiệu năng chính xác Precision@10 giảm sâu (0.0062) do không học được hành vi cộng đồng.
+*   **Mô hình Hybrid ($\alpha = 0.5$):** Đạt sự cân bằng tối ưu vượt trội.
+    *   Tại $K=5$, nó vượt lên dẫn đầu về tất cả các chỉ số chính xác: Precision@5 (0.0140) và Hit Rate@5 (0.0690 - tăng 19% so với CF thuần).
+    *   Thứ hạng xếp hạng chất lượng cực kỳ cao với NDCG@10 (0.0292) và MAP@10 (0.0156) cao nhất hệ thống.
+    *   Độ phủ danh mục Catalog Coverage đạt **0.88%**, tăng **88 lần** so với CF thuần.
+*   **Kết luận:** Chọn **$\alpha = 0.5$** làm giá trị cấu hình lai mặc định của hệ thống gợi ý lai VioTune.
+
+---
+
+### 8.2 Thiết Kế Thử Nghiệm A/B Trực Tuyến (Online A/B Testing Framework)
+
+Để kiểm chứng hiệu năng trong thực tế khi tiếp cận người dùng thật, chúng tôi thiết kế kiến trúc thử nghiệm A/B trực tuyến với các thành phần cụ thể:
+
+#### 8.2.1 Phân nhóm người dùng (Traffic Splitting Mechanism)
+Khi người dùng truy cập hoặc yêu cầu gợi ý, hệ thống băm (`hash`) ID người dùng kèm muối (`salt`) để gán cố định người dùng vào các nhóm với tỷ lệ bằng nhau (33.3% mỗi nhóm):
+```python
+import hashlib
+
+def assign_ab_bucket(user_id: str, salt="viotune_ab_2026") -> str:
+    hash_val = hashlib.md5(f"{user_id}_{salt}".encode()).hexdigest()
+    bucket_idx = int(hash_val, 16) % 3
+    if bucket_idx == 0:
+        return "GROUP_A_CONTROL"     # CF thuần (alpha = 0.0)
+    elif bucket_idx == 1:
+        return "GROUP_B_CB"          # CB thuần (alpha = 1.0)
+    else:
+        return "GROUP_C_HYBRID"      # Hybrid (alpha = 0.5)
+```
+
+#### 8.2.2 Quy trình lưu vết sự kiện (Telemetry & Event Logging)
+Mỗi tương tác của người dùng trên giao diện đối với danh sách gợi ý sẽ gửi một event JSON về Firestore thông qua endpoint `/interactions` hoặc REST API:
+```json
+{
+  "user_id": "user_12345",
+  "track_id": "1dGr1c8CrMLDpV6mPbImSI",
+  "variant_group": "GROUP_C_HYBRID",
+  "event_type": "click | play_start | play_complete | like | add_to_playlist",
+  "session_id": "session_abcde",
+  "timestamp": 1781930557
+}
+```
+
+#### 8.2.3 Các chỉ số đánh giá Online (Online Business Metrics)
+*   **CTR (Click-Through Rate):** Tỷ lệ click vào bài hát được gợi ý trên tổng số lượt hiển thị danh sách gợi ý.
+*   **Play-through Rate:** Tỷ lệ bài hát gợi ý được nghe trên 30 giây (hoặc hết bản preview) trên tổng số lượt click.
+*   **Engagement Rate:** Tỷ lệ người dùng thực hiện thả tim (Like) hoặc lưu vào playlist từ gợi ý.
+*   **Daily Retention (D1/D7 Retention):** So sánh tỷ lệ quay lại của người dùng thuộc nhóm Hybrid so với các nhóm khác.
+
+#### 8.2.4 Phân tích ý nghĩa thống kê (Statistical Significance)
+*   Đối với các chỉ số tỷ lệ (CTR, Engagement Rate): Áp dụng kiểm định **Chi-squared ($\chi^2$) Test** để kiểm tra sự khác biệt giữa các nhóm có ý nghĩa thống kê hay không.
+*   Đối với thời gian nghe trung bình: Áp dụng **Two-sample t-test** với giả thuyết không $H_0$ là thời lượng nghe trung bình giữa nhóm Hybrid và CF thuần không khác biệt. Chỉ chấp nhận phiên bản mới nếu giá trị p-value < 0.05.
 
 ---
 

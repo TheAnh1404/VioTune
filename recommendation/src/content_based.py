@@ -35,6 +35,9 @@ features = [
 songs = songs.dropna(subset=features + ["track_id", "track_genre", "popularity", "artists"])
 songs = songs.reset_index(drop=True)
 
+# Build a fast O(1) lookup index from track_id to dataframe index
+track_id_to_idx = {tid: idx for idx, tid in enumerate(songs["track_id"])}
+
 # ===== NORMALIZE & WEIGHTING =====
 scaler = MinMaxScaler()
 scaled_features = scaler.fit_transform(songs[features])
@@ -101,11 +104,7 @@ def recommend_multi(song_ids, top_n=5):
         return "Danh sách hạt giống trống."
     
     # 1. Tìm các bài hát hạt giống và tính vector trung bình
-    valid_indices = []
-    for sid in song_ids:
-        idx_list = songs[songs["track_id"] == sid].index
-        if len(idx_list) > 0:
-            valid_indices.append(idx_list[0])
+    valid_indices = [track_id_to_idx[sid] for sid in song_ids if sid in track_id_to_idx]
             
     if not valid_indices:
         return "Không tìm thấy bất kỳ bài hát hạt giống nào."
@@ -134,25 +133,32 @@ def recommend_multi(song_ids, top_n=5):
     final_scores = np.zeros(len(neighbor_indices))
     seed_ids_set = set(song_ids)
     
-    for i, n_idx in enumerate(neighbor_indices):
-        neighbor_song = songs.iloc[n_idx]
-        if neighbor_song["track_id"] in seed_ids_set:
+    # Pre-extract numpy arrays to avoid iloc overhead in the loop
+    neighbor_songs = songs.iloc[neighbor_indices]
+    neighbor_ids = neighbor_songs["track_id"].values
+    neighbor_genres = neighbor_songs["track_genre"].values
+    neighbor_artists_list = neighbor_songs["artists"].values
+    neighbor_popularities = neighbor_songs["popularity"].values
+    
+    for i in range(len(neighbor_indices)):
+        tid = neighbor_ids[i]
+        if tid in seed_ids_set:
             final_scores[i] = -1.0 # Bỏ qua các bài hạt giống
             continue
             
         score = 1.0 - distances[i]
         
         # Boost 1: Khớp thể loại (+0.1)
-        if neighbor_song["track_genre"] in target_genres:
+        if neighbor_genres[i] in target_genres:
             score += 0.1
             
         # Boost 2: Khớp nghệ sĩ (+0.15)
-        neighbor_artists = set(str(neighbor_song["artists"]).split(";"))
-        if target_artists.intersection(neighbor_artists):
+        neighbor_arts = set(str(neighbor_artists_list[i]).split(";"))
+        if target_artists.intersection(neighbor_arts):
             score += 0.15
             
         # Boost 3: Độ phủ sóng (+0.05 max)
-        pop_boost = (neighbor_song["popularity"] / 100.0) * 0.05
+        pop_boost = (neighbor_popularities[i] / 100.0) * 0.05
         score += pop_boost
         
         final_scores[i] = score

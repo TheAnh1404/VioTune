@@ -265,52 +265,51 @@ def hybrid_recommend_for_eval(user_id, profile_tracks, play_counts, top_n, alpha
     from collaborative import svd, track_index, index_to_track, songs as cf_songs, user_index
     
     try:
-        beta = 1 - alpha
-        
-        # ── CB: Content-Based multi-seed ──
-        content_df = recommend_multi(profile_tracks[:10], top_n=20)
-        if isinstance(content_df, str):
-            content_results = []
-        else:
-            content_results = content_df[["track_id", "track_name", "artists", "track_genre", "popularity"]].to_dict('records')
-        
-        # ── CF: Offline SVD Fold-in ──
+        beta = 1.0 - alpha
+        content_results = []
         cf_results = []
-        user_ratings = []
-        listened_indices = []
-        for tid in profile_tracks:
-            if tid in track_index:
-                t_idx = track_index[tid]
-                pc = play_counts.get(tid, 1)
-                user_ratings.append((t_idx, np.log1p(pc)))
-                listened_indices.append(t_idx)
         
-        if user_ratings:
-            p_u, b_u = svd.compute_user_latent_vector(user_ratings, n_iterations=30)
-            top_scores = svd.predict_for_user_vector(p_u, b_u, listened_indices)[:20]
-            top_tids = [index_to_track[i] for i, _ in top_scores]
-            cf_df = cf_songs[cf_songs["track_id"].isin(top_tids)]
-            cf_results = cf_df[["track_id", "track_name", "artists", "track_genre", "popularity"]].to_dict('records')
+        # ── CB: Content-Based multi-seed (chỉ chạy nếu alpha > 0) ──
+        if alpha > 0.0:
+            content_df = recommend_multi(profile_tracks[:10], top_n=20)
+            if not isinstance(content_df, str):
+                content_results = content_df["track_id"].tolist()
+        
+        # ── CF: Offline SVD Fold-in (chỉ chạy nếu beta > 0) ──
+        if beta > 0.0:
+            user_ratings = []
+            listened_indices = []
+            for tid in profile_tracks:
+                if tid in track_index:
+                    t_idx = track_index[tid]
+                    pc = play_counts.get(tid, 1)
+                    user_ratings.append((t_idx, np.log1p(pc)))
+                    listened_indices.append(t_idx)
+            
+            if user_ratings:
+                p_u, b_u = svd.compute_user_latent_vector(user_ratings, n_iterations=30)
+                top_scores = svd.predict_for_user_vector(p_u, b_u, listened_indices)[:20]
+                cf_results = [index_to_track[i] for i, _ in top_scores]
         
         # ── Reciprocal Rank Fusion ──
         combined = {}
         
-        for rank, row in enumerate(content_results):
-            key = row["track_id"]
-            combined[key] = {
-                "track_id": key,
-                "score": alpha * (1 / (rank + 1))
-            }
-        
-        for rank, row in enumerate(cf_results):
-            key = row["track_id"]
-            if key in combined:
-                combined[key]["score"] += beta * (1 / (rank + 1))
-            else:
-                combined[key] = {
-                    "track_id": key,
-                    "score": beta * (1 / (rank + 1))
+        if alpha > 0.0:
+            for rank, tid in enumerate(content_results):
+                combined[tid] = {
+                    "track_id": tid,
+                    "score": alpha * (1 / (rank + 1))
                 }
+        
+        if beta > 0.0:
+            for rank, tid in enumerate(cf_results):
+                if tid in combined:
+                    combined[tid]["score"] += beta * (1 / (rank + 1))
+                else:
+                    combined[tid] = {
+                        "track_id": tid,
+                        "score": beta * (1 / (rank + 1))
+                    }
         
         sorted_songs = sorted(combined.values(), key=lambda x: x["score"], reverse=True)
         return [s["track_id"] for s in sorted_songs[:top_n]]
