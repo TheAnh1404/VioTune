@@ -342,8 +342,11 @@ def fetch_firestore_interactions():
     return pd.DataFrame(new_interactions)
 
 
+# Map O(1) track_id -> index của dataframe songs để tăng tốc độ truy xuất trong CF
+track_id_to_idx = {tid: idx for idx, tid in enumerate(songs["track_id"])}
+
 # ===== HÀM GỢI Ý CF TÍCH HỢP HUẤN LUYỆN TRỰC TUYẾN THỜI GIAN THỰC =====
-def recommend_cf(user_id, top_n=5):
+def recommend_cf(user_id, top_n=5, discovery_mode=False):
     """
     Hệ thống gợi ý Collaborative Filtering sử dụng phương pháp chiếu vector người dùng thời gian thực (Fold-in Projection).
     Đồng bộ trực tiếp lượt nghe/like từ Firestore, tính toán P_u & b_u tức thời (<1ms) mà không cần huấn luyện lại SVD.
@@ -397,7 +400,7 @@ def recommend_cf(user_id, top_n=5):
     # 2. Nếu tìm thấy tương tác thời gian thực, tiến hành chiếu Fold-in
     if user_ratings:
         p_u, b_u = svd.compute_user_latent_vector(user_ratings, n_iterations=30)
-        top_scores = svd.predict_for_user_vector(p_u, b_u, listened_indices)[:top_n]
+        top_scores = svd.predict_for_user_vector(p_u, b_u, listened_indices)
     else:
         # 3. Dự phòng 1: Nếu không có tương tác mới nhưng là user cũ trong base dataset
         if user_id_str in user_index:
@@ -410,13 +413,33 @@ def recommend_cf(user_id, top_n=5):
                 track_index[tid] for tid in base_user_rows["track_id"].values
                 if tid in track_index
             ]
-            top_scores = svd.predict_for_user(u_idx, base_listened)[:top_n]
+            top_scores = svd.predict_for_user(u_idx, base_listened)
         else:
-            # 4. Dự phòng 2 (Cold Start): Gợi ý bài hát có độ phổ biến cao nhất
-            popular_songs = songs.sort_values(by="popularity", ascending=False).head(top_n)
+            # 4. Dự phòng 2 (Cold Start): Gợi ý bài hát có độ phổ biến cao nhất/ngẫu nhiên tùy chế độ
+            if discovery_mode:
+                # Chế độ khám phá: Chọn các bài hát ít phổ biến hơn để tạo bất ngờ
+                popular_songs = songs.sort_values(by="popularity", ascending=True).head(top_n * 3).sample(n=top_n)
+            else:
+                popular_songs = songs.sort_values(by="popularity", ascending=False).head(top_n)
             return popular_songs[["track_id", "track_name", "artists", "track_genre", "popularity"]]
             
-    # Lấy thông tin bài hát từ chỉ mục
+    # Lấy thông tin bài hát từ chỉ mục và áp dụng Inverse Popularity Discounting nếu ở chế độ Discovery
+    if discovery_mode:
+        adjusted_scores = []
+        for idx, score in top_scores[:top_n * 10]:
+            tid = index_to_track[idx]
+            if tid in track_id_to_idx:
+                song_row = songs.iloc[track_id_to_idx[tid]]
+                popularity = song_row["popularity"]
+                # Trừ điểm dựa trên mức độ phổ biến: trừ (popularity / 100.0) * 0.5
+                adjusted_score = score - (popularity / 100.0) * 0.5
+                adjusted_scores.append((idx, adjusted_score))
+        # Sắp xếp lại dựa trên điểm đã điều chỉnh
+        adjusted_scores.sort(key=lambda x: x[1], reverse=True)
+        top_scores = adjusted_scores[:top_n]
+    else:
+        top_scores = top_scores[:top_n]
+
     top_track_ids = [index_to_track[i] for i, _ in top_scores]
     result = songs[songs["track_id"].isin(top_track_ids)][
         ["track_id", "track_name", "artists", "track_genre", "popularity"]

@@ -60,6 +60,7 @@ def build_annoy_index():
     scaled_features = scaled_features * weights
     
     try:
+        # pyrefly: ignore [missing-import]
         from annoy import AnnoyIndex
         print("[Train] Building Annoy Index...")
         annoy_index = AnnoyIndex(7, 'angular')

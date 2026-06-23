@@ -15,24 +15,24 @@ class RecommendRequest(BaseModel):
     alpha: Optional[float] = 0.5
 
 @router.get("")
-def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), alpha: float = Query(0.5, ge=0.0, le=1.0), current_user: dict = Depends(get_current_user)):
+def recommend(user_id: str, song_id: str, top_n: int = Query(5, ge=1, le=50), alpha: float = Query(0.5, ge=0.0, le=1.0), discovery_mode: bool = Query(False), current_user: dict = Depends(get_current_user)):
     user_id = require_matching_user(user_id, current_user)
     song_ids = [s.strip() for s in song_id.split(",") if s.strip()]
-    result = hybrid_recommend(user_id=user_id, song_ids=song_ids, top_n=top_n, alpha=alpha)
+    result = hybrid_recommend(user_id=user_id, song_ids=song_ids, top_n=top_n, alpha=alpha, discovery_mode=discovery_mode)
     if isinstance(result, str): raise HTTPException(status_code=404, detail=result)
     return {"status": "success", "data": result}
 
 @router.get("/content")
-def recommend_content(song_id: str, top_n: int = Query(5, ge=1, le=50)):
+def recommend_content(song_id: str, top_n: int = Query(5, ge=1, le=50), user_id: Optional[str] = Query(None), discovery_mode: bool = Query(False)):
     song_ids = [s.strip() for s in song_id.split(",") if s.strip()]
-    result_df = content_recommend_multi(song_ids, top_n=top_n)
+    result_df = content_recommend_multi(song_ids, top_n=top_n, user_id=user_id, discovery_mode=discovery_mode)
     if isinstance(result_df, str): raise HTTPException(status_code=404, detail=result_df)
     return {"status": "success", "data": result_df.to_dict(orient="records")}
 
 @router.get("/cf")
-def recommend_collaborative(user_id: str, top_n: int = Query(5, ge=1, le=50), current_user: dict = Depends(get_current_user)):
+def recommend_collaborative(user_id: str, top_n: int = Query(5, ge=1, le=50), discovery_mode: bool = Query(False), current_user: dict = Depends(get_current_user)):
     user_id = require_matching_user(user_id, current_user)
-    result_df = recommend_cf(user_id, top_n=top_n)
+    result_df = recommend_cf(user_id, top_n=top_n, discovery_mode=discovery_mode)
     if isinstance(result_df, str): raise HTTPException(status_code=404, detail=result_df)
     return {"status": "success", "data": result_df.to_dict(orient="records")}
 

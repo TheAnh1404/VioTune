@@ -2,22 +2,23 @@ from src.content_based import recommend_multi
 from src.collaborative import recommend_cf
 
 # ===== HYBRID FUNCTION =====
-def hybrid_recommend(user_id, song_ids, top_n=5, alpha=0.5):
+def hybrid_recommend(user_id, song_ids, top_n=5, alpha=0.5, discovery_mode=False):
     """
     Hệ thống gợi ý Hybrid: Kết hợp Content-Based và Collaborative Filtering.
 
-    user_id  : Dùng cho CF (SVD Matrix Factorization)
-    song_ids : Danh sách track_id dùng làm hạt giống cho Content-Based
-    alpha    : Trọng số của Content-Based (0 → 1). CF nhận trọng số (1 - alpha).
+    user_id        : Dùng cho CF (SVD Matrix Factorization) và Dynamic Profile Matching
+    song_ids       : Danh sách track_id dùng làm hạt giống cho Content-Based
+    alpha          : Trọng số của Content-Based (0 → 1). CF nhận trọng số (1 - alpha).
+    discovery_mode : Chế độ khám phá (kích hoạt Inverse Popularity Discounting)
     """
     beta = 1 - alpha
 
     # ===== LẤY KẾT QUẢ TỪ HAI MÔ HÌNH =====
-    # Content-Based dùng multi-seed
-    content_df = recommend_multi(song_ids, top_n=20)
+    # Content-Based dùng multi-seed và truyền user_id + discovery_mode
+    content_df = recommend_multi(song_ids, top_n=20, user_id=user_id, discovery_mode=discovery_mode)
     
-    # Collaborative Filtering gợi ý dựa trên user profile
-    cf_result = recommend_cf(user_id, top_n=20)
+    # Collaborative Filtering gợi ý dựa trên user profile và truyền discovery_mode
+    cf_result = recommend_cf(user_id, top_n=20, discovery_mode=discovery_mode)
 
     # Xử lý lỗi Content-Based
     if isinstance(content_df, str):

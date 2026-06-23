@@ -120,17 +120,17 @@ def get_song_preview_route(track_name: str, artist: str):
     except Exception: pass
 
     query = urllib.parse.quote(f"{track_name} {artist}")
-    deezer_url = f"https://api.deezer.com/search?q={query}&limit=5"
+    itunes_url = f"https://itunes.apple.com/search?term={query}&entity=song&limit=1"
     try:
-        resp = requests.get(deezer_url, timeout=6)
+        resp = requests.get(itunes_url, timeout=6)
         data = resp.json()
         preview_url, cover_url, d_title, d_artist = None, None, None, None
-        if data.get("data"):
-            item = data["data"][0]
-            preview_url = item.get("preview")
-            cover_url = item.get("album", {}).get("cover_medium")
-            d_title = item.get("title")
-            d_artist = item.get("artist", {}).get("name")
+        if data.get("resultCount", 0) > 0:
+            item = data["results"][0]
+            preview_url = item.get("previewUrl")
+            cover_url = item.get("artworkUrl100", "").replace("100x100bb", "500x500bb") if item.get("artworkUrl100") else None
+            d_title = item.get("trackName")
+            d_artist = item.get("artistName")
         
         conn = get_db_connection()
         conn.execute("INSERT OR REPLACE INTO deezer_cache VALUES (?, ?, ?, ?, ?, ?)",

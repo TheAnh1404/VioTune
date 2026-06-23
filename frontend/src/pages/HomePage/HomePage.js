@@ -73,6 +73,7 @@ const HomePage = () => {
   const [recs, setRecs] = useState([]);
   const [taste, setTaste] = useState(null);
   const [loadingRecs, setLoadingRecs] = useState(false);
+  const [discoveryMode, setDiscoveryMode] = useState(false);
   
   // Search seed states
   const [seedQuery, setSeedQuery] = useState("");
@@ -202,7 +203,7 @@ const HomePage = () => {
       setLoadingRecs(true);
       try {
         const ids = seedSongs.map(s => s.track_id).join(',');
-        const res = await authenticatedFetch(`${API_URL}/recommend?user_id=${userId}&song_id=${ids}&alpha=${alpha}&top_n=6`);
+        const res = await authenticatedFetch(`${API_URL}/recommend?user_id=${userId}&song_id=${ids}&alpha=${alpha}&top_n=6&discovery_mode=${discoveryMode}`);
         const json = await res.json();
         if (json.status === "success") {
           const tracks = json.data.map(track => {
@@ -223,7 +224,7 @@ const HomePage = () => {
     };
 
     fetchRecommendations();
-  }, [userId, seedSongs, alpha]);
+  }, [userId, seedSongs, alpha, discoveryMode]);
 
   // ── 6. Dynamic Accent Glow Effect ───────────────────────────────────────────
   useEffect(() => {
@@ -477,6 +478,20 @@ const HomePage = () => {
                       onChange={(e) => setAlpha(parseFloat(e.target.value))}
                       className={styles.rangeInput}
                     />
+                  </div>
+
+                  {/* Discovery Mode Switch */}
+                  <div className={styles.discoveryModeGroup}>
+                    <label className={styles.switchLabel}>
+                      <input 
+                        type="checkbox" 
+                        checked={discoveryMode} 
+                        onChange={(e) => setDiscoveryMode(e.target.checked)} 
+                        className={styles.switchInput}
+                      />
+                      <span className={styles.switchCustom}></span>
+                      <span className={styles.switchText}>✨ Chế độ Khám phá (Discovery Mode)</span>
+                    </label>
                   </div>
 
                   {isAdmin && <div className={styles.retrainSection}>

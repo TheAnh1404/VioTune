@@ -28,6 +28,7 @@ const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds
   const [recs, setRecs] = useState([]);
   const [taste, setTaste] = useState(null);
   const [loadingRecs, setLoadingRecs] = useState(false);
+  const [discoveryMode, setDiscoveryMode] = useState(false);
   
   // Search state for custom seed
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,13 +101,13 @@ const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds
     return () => clearTimeout(delayDebounce);
   }, [searchQuery]);
 
-  // 4. Fetch recommendations when alpha or seedSong changes
+  // 4. Fetch recommendations when alpha, seedSong, or discoveryMode changes
   useEffect(() => {
     const fetchRecommendations = async () => {
       if (!userId || !seedSong) return;
       setLoadingRecs(true);
       try {
-        const res = await authenticatedFetch(`${API_URL}/recommend?user_id=${userId}&song_id=${seedSong.track_id}&alpha=${alpha}&top_n=6`);
+        const res = await authenticatedFetch(`${API_URL}/recommend?user_id=${userId}&song_id=${seedSong.track_id}&alpha=${alpha}&top_n=6&discovery_mode=${discoveryMode}`);
         const json = await res.json();
         if (json.status === "success") {
           // Convert from hybrid output {track_name, artists, track_genre} 
@@ -130,7 +131,7 @@ const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds
     };
 
     fetchRecommendations();
-  }, [userId, seedSong, alpha]);
+  }, [userId, seedSong, alpha, discoveryMode]);
 
   const selectSeed = (song) => {
     setSeedSong(song);
@@ -330,6 +331,27 @@ const AIRecommendationStation = ({ userId, currentSong, onPlaySong, likedSongIds
                 <Layers size={14} style={{ marginRight: '6px' }} />
                 <span>{getAlphaLabel()}</span>
               </div>
+            </div>
+
+            {/* Discovery Mode Toggle (Inverse Popularity Discounting) */}
+            <div className={styles.discoveryModeGroup}>
+              <label className={styles.switchLabel}>
+                <input 
+                  type="checkbox" 
+                  checked={discoveryMode} 
+                  onChange={(e) => setDiscoveryMode(e.target.checked)} 
+                  className={styles.switchInput}
+                />
+                <span className={styles.switchCustom}></span>
+                <span className={styles.switchText}>
+                  ✨ Chế độ Khám phá (Discovery Mode)
+                </span>
+              </label>
+              <p className={styles.discoveryDesc}>
+                {discoveryMode 
+                  ? "Đã kích hoạt: Giảm độ ưu tiên của các ca khúc thịnh hành để đề xuất nhạc ngách đặc sắc."
+                  : "Mặc định: Ưu tiên nhẹ các bài hát phổ biến hơn."}
+              </p>
             </div>
           </div>
 

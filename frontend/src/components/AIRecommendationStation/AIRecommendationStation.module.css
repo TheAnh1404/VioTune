@@ -550,3 +550,67 @@
 .liked {
   color: var(--accent-danger);
 }
+
+/* Discovery Mode Switch */
+.discoveryModeGroup {
+  margin-top: 14px;
+  background: rgba(6, 182, 212, 0.02);
+  border: 1px solid rgba(6, 182, 212, 0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.switchLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switchInput {
+  display: none;
+}
+
+.switchCustom {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  transition: background-color 0.2s;
+}
+
+.switchCustom::before {
+  content: "";
+  position: absolute;
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.switchInput:checked + .switchCustom {
+  background-color: var(--accent-secondary);
+}
+
+.switchInput:checked + .switchCustom::before {
+  transform: translateX(16px);
+}
+
+.switchText {
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.discoveryDesc {
+  font-size: var(--text-micro);
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: var(--leading-snug);
+}

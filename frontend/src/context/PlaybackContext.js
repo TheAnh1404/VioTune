@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { API_URL } from '../config';
+import { authenticatedFetch } from '../api';
 
 const PlaybackContext = createContext(null);
 
@@ -54,7 +55,6 @@ export const PlaybackProvider = ({ children }) => {
           cover_url: cover
         };
         
-        // Append cover_url to current song dynamically in state
         if (cover) {
           setCurrentSong(prev => {
             if (prev && prev.track_id === song.track_id) {
@@ -76,16 +76,14 @@ export const PlaybackProvider = ({ children }) => {
     }
   };
 
-  // Sync Audio Playback: Fetch Preview URL when song changes
   useEffect(() => {
     let active = true;
     if (currentSong && currentSong.track_id) {
-      setPreviewUrl(null); // Reset URL before fetching new one
+      setPreviewUrl(null); 
       fetchDeezerPreview(currentSong).then(url => {
         if (!active) return;
         setPreviewUrl(url);
         if (!url) {
-          console.warn(`No Deezer preview found for: ${currentSong.track_name}`);
           setIsPlaying(false);
         }
       });
@@ -95,13 +93,11 @@ export const PlaybackProvider = ({ children }) => {
     return () => { active = false; };
   }, [currentSong]);
 
-  // Handle Play/Pause and Volume separately and synchronously
   useEffect(() => {
     if (!audioRef.current) return;
     audioRef.current.volume = volume;
 
     if (isPlaying && previewUrl) {
-      // Ensure src is set before playing
       if (audioRef.current.src !== previewUrl) {
         audioRef.current.src = previewUrl;
         audioRef.current.load();
@@ -111,7 +107,7 @@ export const PlaybackProvider = ({ children }) => {
       if (playPromise !== undefined) {
         playPromise.catch(err => {
           console.warn('Playback blocked by browser autoplay policy:', err);
-          setIsPlaying(false); // Reset to paused if blocked
+          setIsPlaying(false);
         });
       }
     } else {
@@ -119,7 +115,6 @@ export const PlaybackProvider = ({ children }) => {
     }
   }, [isPlaying, previewUrl, volume]);
 
-  // Sync Volume
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
@@ -127,25 +122,38 @@ export const PlaybackProvider = ({ children }) => {
   }, [volume]);
 
   const playSong = (song, songList = []) => {
-    let targetQueue = songList;
-    if (!targetQueue || targetQueue.length === 0) {
-      targetQueue = [song];
+    if (audioRef.current) {
+      audioRef.current.play().catch(() => {});
     }
-
-    setQueue(targetQueue);
-    const idx = targetQueue.findIndex(s => s.track_id === song.track_id);
-    setCurrentIndex(idx >= 0 ? idx : 0);
 
     if (currentSong && currentSong.track_id === song.track_id) {
       setIsPlaying(!isPlaying);
     } else {
       setCurrentSong(song);
       setIsPlaying(true);
+      
+      setQueue([song]);
+      setCurrentIndex(0);
 
-      // Record play in Firestore
       if (user) {
         recordPlay(song).catch(err => console.warn('recordPlay failed:', err));
       }
+
+      const url = user 
+        ? `${API_URL}/recommend?user_id=${user.uid}&song_id=${song.track_id}&top_n=20`
+        : `${API_URL}/recommend/content?song_id=${song.track_id}&top_n=20`;
+      
+      const fetchReq = user ? authenticatedFetch : fetch;
+      
+      fetchReq(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "success" && data.data) {
+            const recs = data.data.filter(s => s.track_id !== song.track_id);
+            setQueue([song, ...recs]);
+          }
+        })
+        .catch(err => console.warn('Failed to load recommended queue', err));
     }
   };
 
@@ -281,6 +289,7 @@ export const PlaybackProvider = ({ children }) => {
       <audio 
         ref={audioRef}
         crossOrigin="anonymous"
+        autoPlay={isPlaying}
         onDurationChange={(e) => setDuration(e.target.duration)}
         onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
         onEnded={handleAudioEnded}

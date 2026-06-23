@@ -25,9 +25,12 @@ const MusicVisualizer = ({ audioElement, isPlaying }) => {
       
       // Attempt to connect the source (may fail if already connected)
       try {
-        sourceRef.current = contextRef.current.createMediaElementSource(audioElement);
-        sourceRef.current.connect(analyzerRef.current);
-        analyzerRef.current.connect(contextRef.current.destination);
+        if (!audioElement._sourceConnected) {
+          sourceRef.current = contextRef.current.createMediaElementSource(audioElement);
+          sourceRef.current.connect(analyzerRef.current);
+          analyzerRef.current.connect(contextRef.current.destination);
+          audioElement._sourceConnected = true;
+        }
       } catch (err) {
         console.warn("Visualizer connection issue:", err);
       }

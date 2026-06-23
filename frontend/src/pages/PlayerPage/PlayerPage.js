@@ -74,14 +74,15 @@ const PlayerPage = () => {
   
   const [similarSongs, setSimilarSongs] = useState([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
+  const [discoveryMode, setDiscoveryMode] = useState(false);
 
-  // Fetch similar songs whenever currentSong changes (Content-Based AI KNN suggestions)
+  // Fetch similar songs whenever currentSong, userId, or discoveryMode changes (Content-Based AI KNN suggestions)
   useEffect(() => {
     const fetchSimilar = async () => {
       if (!currentSong || !currentSong.track_id) return;
       setLoadingSimilar(true);
       try {
-        const res = await fetch(`${API_URL}/recommend/content?song_id=${currentSong.track_id}&top_n=8`);
+        const res = await fetch(`${API_URL}/recommend/content?song_id=${currentSong.track_id}&top_n=8&user_id=${userId}&discovery_mode=${discoveryMode}`);
         const json = await res.json();
         if (json.status === "success") {
           const data = json.data.map(song => ({
@@ -97,7 +98,7 @@ const PlayerPage = () => {
       }
     };
     fetchSimilar();
-  }, [currentSong]);
+  }, [currentSong, userId, discoveryMode]);
 
   const username = user?.displayName || user?.email?.split('@')[0] || 'Music Lover';
   const songTitle = currentSong ? currentSong.track_name : "Không có bài hát";
@@ -415,7 +416,19 @@ const PlayerPage = () => {
                 ) : (
                   <div className={styles.similarList}>
                     <div className={styles.similarBanner}>
-                      🪄 Gợi ý thông minh dựa trên đặc trưng sóng âm (KNN Cosine)
+                      <span>🪄 Gợi ý thông minh dựa trên đặc trưng sóng âm (KNN Cosine)</span>
+                      <div className={styles.playerDiscoveryToggle}>
+                        <label className={styles.playerSwitchLabel}>
+                          <input 
+                            type="checkbox" 
+                            checked={discoveryMode} 
+                            onChange={(e) => setDiscoveryMode(e.target.checked)} 
+                            className={styles.playerSwitchInput}
+                          />
+                          <span className={styles.playerSwitchCustom}></span>
+                          <span className={styles.playerSwitchText}>Chế độ Khám phá (Discovery)</span>
+                        </label>
+                      </div>
                     </div>
                     {similarSongs.map((song, idx) => {
                       const isSongLiked = likedSongIds.has(song.track_id);
